@@ -5,6 +5,24 @@ import { useBookstore } from "../context/useBookstore";
 import { getBookPricing } from "../services/booksDb";
 import { Search, Star, Heart, ShoppingBag, BookOpen, SlidersHorizontal, ArrowDownAZ } from "lucide-react";
 
+
+// Premium Shimmer skeleton image loader to prevent layout shifts
+const ImageWithPlaceholder = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative w-full h-full bg-[#1A1A1A]">
+      {!loaded && <div className="absolute inset-0 animate-shimmer" />}
+      <img
+        loading="lazy"
+        src={src}
+        alt={alt}
+        className={`${className} ${loaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300`}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+};
+
 interface LibraryPageProps {
   books: Book[];
   onBookSelect: (book: Book) => void;
@@ -336,7 +354,7 @@ export default function LibraryPage({ books, onBookSelect }: LibraryPageProps) {
                       onClick={() => onBookSelect(book)}
                       className="aspect-[3/4] rounded-lg overflow-hidden border border-customBorder/50 relative cursor-pointer transform group-hover:scale-[1.02] transition-all duration-500 shadow-md"
                     >
-                      <img loading="lazy" 
+                      <ImageWithPlaceholder 
                         src={book.coverUrl} 
                         alt={book.title} 
                         className="w-full h-full object-cover group-hover:brightness-90 transition-all" 

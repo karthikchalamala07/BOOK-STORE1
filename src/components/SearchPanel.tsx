@@ -18,9 +18,18 @@ export default function SearchPanel({
   onBookSelect
 }: SearchPanelProps) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [genreFilter, setGenreFilter] = useState("All");
   const [searchResults, setSearchResults] = useState<Book[]>([]);
   const [openLibraryResults, setOpenLibraryResults] = useState<Book[]>([]);
+
+  // Debounce the input query to prevent lag on keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [query]);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,7 +42,7 @@ export default function SearchPanel({
 
   // Real-time search processing
   useEffect(() => {
-    if (!query.trim()) {
+    if (!debouncedQuery.trim()) {
       setSearchResults(localBooks);
       setOpenLibraryResults([]);
       return;
@@ -42,33 +51,27 @@ export default function SearchPanel({
     // Filter local books
     const localFiltered = localBooks.filter(book => {
       const matchText = `${book.title} ${book.author} ${book.genre} ${book.year}`.toLowerCase();
-      const matchesQuery = matchText.includes(query.toLowerCase());
+      const matchesQuery = matchText.includes(debouncedQuery.toLowerCase());
       const matchesGenre = genreFilter === "All" || book.genre === genreFilter;
       return matchesQuery && matchesGenre;
     });
     setSearchResults(localFiltered);
 
-    // Debounce Open Library API searches to limit network spam
-    const delayDebounce = setTimeout(async () => {
-      if (query.length > 2) {
-        setLoading(true);
-        try {
-          const apiBooks = await searchOpenLibrary(query);
-          // Filter out duplicates that might already exist locally
-          const filteredApi = apiBooks.filter(
-            apiBook => !localBooks.some(local => local.title.toLowerCase() === apiBook.title.toLowerCase())
-          );
-          setOpenLibraryResults(filteredApi);
-        } catch (err) {
-          console.error(err);
-        } finally {
-          setLoading(false);
-        }
-      }
-    }, 800);
-
-    return () => clearTimeout(delayDebounce);
-  }, [query, genreFilter, localBooks]);
+    // Fetch Open Library API
+    if (debouncedQuery.length > 2) {
+      setLoading(true);
+      searchOpenLibrary(debouncedQuery).then((apiBooks) => {
+        const filteredApi = apiBooks.filter(
+          apiBook => !localBooks.some(local => local.title.toLowerCase() === apiBook.title.toLowerCase())
+        );
+        setOpenLibraryResults(filteredApi);
+      }).catch((err) => {
+        console.error(err);
+      }).finally(() => {
+        setLoading(false);
+      });
+    }
+  }, [debouncedQuery, genreFilter, localBooks]);
 
   const genres = ["All", ...Array.from(new Set(localBooks.map(b => b.genre)))];
 
@@ -190,7 +193,7 @@ export default function SearchPanel({
                   {loading && <Loader2 size={12} className="animate-spin text-gold" />}
                 </div>
                 
-                {query.length <= 2 ? (
+                {debouncedQuery.length <= 2 ? (
                   <p className="text-secondaryText/40 text-xs font-mono py-2">
                     Type at least 3 characters to search the global Open Library and Project Gutenberg registries.
                   </p>

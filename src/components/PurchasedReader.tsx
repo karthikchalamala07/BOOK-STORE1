@@ -47,6 +47,15 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
 
   const [highlights, setHighlights] = useState<{ pageIndex: number; paragraphIndex: number }[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  // Debounce in-book search input to prevent scanning page contents on every key stroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
 
   // Bookmarking state
@@ -392,13 +401,13 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
 
   // Search
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!debouncedSearchQuery.trim()) return [];
     const results: { pageIdx: number; chapterTitle: string; snippet: string }[] = [];
     bookPages.forEach((page, idx) => {
       if (page.type === "content" && page.content) {
-        const matchingPara = page.content.find(p => p.toLowerCase().includes(searchQuery.toLowerCase()));
+        const matchingPara = page.content.find(p => p.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
         if (matchingPara) {
-          const idxOf = matchingPara.toLowerCase().indexOf(searchQuery.toLowerCase());
+          const idxOf = matchingPara.toLowerCase().indexOf(debouncedSearchQuery.toLowerCase());
           const start = Math.max(0, idxOf - 20);
           const end = Math.min(matchingPara.length, idxOf + 40);
           const snippet = (start > 0 ? "..." : "") + matchingPara.substring(start, end) + (end < matchingPara.length ? "..." : "");

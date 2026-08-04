@@ -52,6 +52,15 @@ export default function Book3DViewer({
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  // Debounce in-book search input to prevent scanning page contents on every key stroke
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
 
   // E-commerce hooks
@@ -297,14 +306,14 @@ export default function Book3DViewer({
 
   // Resolve search results
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!debouncedSearchQuery.trim()) return [];
     
     const results: { pageIdx: number; chapterTitle: string; snippet: string }[] = [];
     bookPages.forEach((page, idx) => {
       if (page.type === "content" && page.content) {
-        const matchingPara = page.content.find(p => p.toLowerCase().includes(searchQuery.toLowerCase()));
+        const matchingPara = page.content.find(p => p.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
         if (matchingPara) {
-          const idxOf = matchingPara.toLowerCase().indexOf(searchQuery.toLowerCase());
+          const idxOf = matchingPara.toLowerCase().indexOf(debouncedSearchQuery.toLowerCase());
           const start = Math.max(0, idxOf - 30);
           const end = Math.min(matchingPara.length, idxOf + 50);
           const snippet = (start > 0 ? "..." : "") + matchingPara.substring(start, end) + (end < matchingPara.length ? "..." : "");

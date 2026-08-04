@@ -2,6 +2,24 @@ import React, { useEffect } from "react";
 import { Book } from "../types";
 import { Star, BookOpen, Eye } from "lucide-react";
 
+
+// Premium Shimmer skeleton image loader to prevent layout shifts
+const ImageWithPlaceholder = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
+  const [loaded, setLoaded] = React.useState(false);
+  return (
+    <div className="relative w-full h-full bg-[#1A1A1A]">
+      {!loaded && <div className="absolute inset-0 animate-shimmer" />}
+      <img
+        loading="lazy"
+        src={src}
+        alt={alt}
+        className={`${className} ${loaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300`}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+};
+
 interface FeaturedBooksProps {
   books: Book[];
   onBookSelect: (book: Book) => void;
@@ -78,7 +96,7 @@ export default function FeaturedBooks({ books, onBookSelect, onReadPreview }: Fe
                   onClick={() => onBookSelect(book)}
                   className="w-full aspect-[3/4] rounded-lg overflow-hidden border border-customBorder/50 shadow-xl relative cursor-pointer transform group-hover:scale-[1.02] transition-transform duration-500 origin-bottom"
                 >
-                  <img loading="lazy" 
+                  <ImageWithPlaceholder 
                     src={coverImage} 
                     alt={title} 
                     className="w-full h-full object-cover" 

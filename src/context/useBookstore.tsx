@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { 
   collection, doc, getDoc, setDoc, updateDoc, onSnapshot, 
   addDoc, runTransaction, getDocs, writeBatch, query, where 
@@ -860,33 +860,45 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const contextValue = useMemo(() => ({
+    books,
+    cart,
+    wishlist,
+    purchasedBooks,
+    activeCoupon,
+    shippingDetails,
+    currentUser,
+    toasts,
+    receipts,
+    addToast,
+    removeToast,
+    addToCart,
+    removeFromCart,
+    clearCart,
+    toggleWishlist,
+    isInWishlist,
+    applyCoupon,
+    removeCoupon,
+    saveShipping,
+    checkout,
+    downloadBook,
+    verifyAndActivateCode,
+    fetchUserLibrary,
+    saveReadingProgress
+  }), [
+    books,
+    cart,
+    wishlist,
+    purchasedBooks,
+    activeCoupon,
+    shippingDetails,
+    currentUser,
+    toasts,
+    receipts
+  ]);
+
   return (
-    <BookstoreContext.Provider value={{
-      books,
-      cart,
-      wishlist,
-      purchasedBooks,
-      activeCoupon,
-      shippingDetails,
-      currentUser,
-      toasts,
-      receipts,
-      addToast,
-      removeToast,
-      addToCart,
-      removeFromCart,
-      clearCart,
-      toggleWishlist,
-      isInWishlist,
-      applyCoupon,
-      removeCoupon,
-      saveShipping,
-      checkout,
-      downloadBook,
-      verifyAndActivateCode,
-      fetchUserLibrary,
-      saveReadingProgress
-    }}>
+    <BookstoreContext.Provider value={contextValue}>
       {children}
     </BookstoreContext.Provider>
   );

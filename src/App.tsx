@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from "react";
+import React, { useState, useEffect, Suspense, lazy, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
@@ -78,29 +78,43 @@ function AppContent() {
     }
     loadUnlocked();
   }, [currentUser, fetchUserLibrary, activeBook]);
-  const [cursorPos, setCursorPos] = useState({ x: -100, y: -100 });
-  const [cursorHovered, setCursorHovered] = useState(false);
+  const cursorOuterRef = useRef<HTMLDivElement>(null);
+  const cursorInnerRef = useRef<HTMLDivElement>(null);
   const [flyingBook, setFlyingBook] = useState<{ cover: string; x: number; y: number } | null>(null);
 
   // Custom Cursor mouse listener
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setCursorPos({ x: e.clientX, y: e.clientY });
+      if (cursorOuterRef.current && cursorInnerRef.current) {
+        cursorOuterRef.current.style.left = `${e.clientX}px`;
+        cursorOuterRef.current.style.top = `${e.clientY}px`;
+        cursorInnerRef.current.style.left = `${e.clientX}px`;
+        cursorInnerRef.current.style.top = `${e.clientY}px`;
+      }
     };
 
     const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (
+      const isInteractive = 
         target.tagName === "BUTTON" || 
         target.tagName === "A" || 
         target.closest("button") || 
         target.closest("a") ||
         target.classList.contains("cursor-pointer") ||
-        target.closest(".cursor-pointer")
-      ) {
-        setCursorHovered(true);
-      } else {
-        setCursorHovered(false);
+        target.closest(".cursor-pointer");
+
+      if (cursorOuterRef.current) {
+        if (isInteractive) {
+          cursorOuterRef.current.style.width = "48px";
+          cursorOuterRef.current.style.height = "48px";
+          cursorOuterRef.current.style.backgroundColor = "rgba(201, 162, 39, 0.08)";
+          cursorOuterRef.current.style.boxShadow = "0 0 15px rgba(201, 162, 39, 0.3)";
+        } else {
+          cursorOuterRef.current.style.width = "24px";
+          cursorOuterRef.current.style.height = "24px";
+          cursorOuterRef.current.style.backgroundColor = "transparent";
+          cursorOuterRef.current.style.boxShadow = "none";
+        }
       }
     };
 
@@ -193,22 +207,24 @@ function AppContent() {
 
       {/* Custom Cursor follower */}
       <div 
+        ref={cursorOuterRef}
         className="hidden md:block fixed pointer-events-none z-50 rounded-full transition-all duration-150 -translate-x-1/2 -translate-y-1/2"
         style={{
-          left: `${cursorPos.x}px`,
-          top: `${cursorPos.y}px`,
-          width: cursorHovered ? "48px" : "24px",
-          height: cursorHovered ? "48px" : "24px",
+          left: "-100px",
+          top: "-100px",
+          width: "24px",
+          height: "24px",
           border: "1px solid #C9A227",
-          backgroundColor: cursorHovered ? "rgba(201, 162, 39, 0.08)" : "transparent",
-          boxShadow: cursorHovered ? "0 0 15px rgba(201, 162, 39, 0.3)" : "none",
+          backgroundColor: "transparent",
+          boxShadow: "none",
         }}
       />
       <div 
+        ref={cursorInnerRef}
         className="hidden md:block fixed w-1.5 h-1.5 bg-gold rounded-full pointer-events-none z-50 -translate-x-1/2 -translate-y-1/2"
         style={{
-          left: `${cursorPos.x}px`,
-          top: `${cursorPos.y}px`,
+          left: "-100px",
+          top: "-100px",
         }}
       />
 
