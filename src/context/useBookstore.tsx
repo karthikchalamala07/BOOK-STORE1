@@ -140,7 +140,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Sign in anonymously if no session active
         signInAnonymously(auth).catch(err => {
-          console.warn("Firebase sign in failed: ", err);
+          console.warn("User authentication failed: ", err);
         });
       }
     });
@@ -216,7 +216,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
           }
           await batch.commit();
         } catch (seedErr) {
-          console.error("Failed to seed books to Firestore:", seedErr);
+          console.error("Failed to seed books to Content Repository:", seedErr);
         }
       } else {
         const fetched: Book[] = [];
@@ -504,7 +504,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       }
 
     } catch (checkoutErr) {
-      console.warn("Firestore checkout failed. Using offline fallback:", checkoutErr);
+      console.warn("Cloud checkout failed. Using offline fallback:", checkoutErr);
       
       // Fallback local storage orders list
       const localOrders = JSON.parse(localStorage.getItem("storyvault_orders") || "[]");
@@ -616,7 +616,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
             codeDoc = docSnap.data();
           }
         } catch (dbErr) {
-          console.warn("Firestore fetch failed, checking local storage fallback:", dbErr);
+          console.warn("Cloud fetch failed, checking local fallback:", dbErr);
         }
       }
 
@@ -737,7 +737,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       });
       return merged;
     } catch (err) {
-      console.warn("Firestore fetch failed, checking local storage:", err);
+      console.warn("Cloud fetch failed, checking local storage:", err);
       return JSON.parse(localStorage.getItem(localLibKey) || "[]");
     }
   };
@@ -754,7 +754,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
         pageIndex
       });
     } catch (err) {
-      console.warn("Firestore progress update failed:", err);
+      console.warn("Cloud progress update failed:", err);
     }
     
     const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
@@ -782,7 +782,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
           foundReceipt = receiptSnap.data();
         }
       } catch (e) {
-        console.warn("Firestore receipt query failed, trying local storage:", e);
+        console.warn("Receipt verification query failed, checking local repository:", e);
       }
       
       if (!foundReceipt) {
@@ -838,7 +838,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       try {
         await setDoc(doc(db, "downloadHistory", historyId), downloadRecord);
       } catch (histErr) {
-        console.warn("Failed to write download history to Firestore, using local log:", histErr);
+        console.warn("Failed to log download history to cloud, using local backup:", histErr);
         const localHistory = JSON.parse(localStorage.getItem("storyvault_download_history") || "[]");
         localHistory.push(downloadRecord);
         localStorage.setItem("storyvault_download_history", JSON.stringify(localHistory));

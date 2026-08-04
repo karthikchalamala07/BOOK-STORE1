@@ -253,7 +253,7 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
             lastRead: new Date().toISOString()
           });
         } catch (e) {
-          console.warn("Firestore progress update failed:", e);
+          console.warn("Cloud progress update failed:", e);
         }
       }
     };
@@ -320,7 +320,7 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
     try {
       updateDoc(doc(db, "users", uid, "digitalLibrary", book.id), { highlights: updated });
     } catch (e) {
-      console.warn("Firestore sync failed:", e);
+      console.warn("Cloud synchronization failed:", e);
     }
   };
 
@@ -363,7 +363,7 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
     try {
       updateDoc(doc(db, "users", uid, "digitalLibrary", book.id), { notes: updated });
     } catch (e) {
-      console.warn("Firestore note write failed:", e);
+      console.warn("Cloud note write failed:", e);
     }
   };
 
@@ -386,7 +386,7 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
     try {
       updateDoc(doc(db, "users", uid, "digitalLibrary", book.id), { notes: updated });
     } catch (e) {
-      console.warn("Firestore note delete failed:", e);
+      console.warn("Cloud note delete failed:", e);
     }
   };
 

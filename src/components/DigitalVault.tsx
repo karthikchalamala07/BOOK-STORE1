@@ -86,7 +86,7 @@ export default function DigitalVault({ onReadPreview }: DigitalVaultProps) {
       const userId = auth.currentUser?.uid || "guest";
       await deleteDoc(doc(db, "users", userId, "digitalLibrary", bookId));
     } catch (e) {
-      console.warn("Firestore delete failed, using local storage sync only:", e);
+      console.warn("Cloud deletion failed, using local backup only:", e);
     }
 
     const uid = auth.currentUser?.uid || "guest";

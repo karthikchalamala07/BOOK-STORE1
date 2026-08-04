@@ -166,7 +166,7 @@ export default function BookDetails({
       setReviewComment("");
       setReviewRating(5);
     } catch (err) {
-      console.warn("Failed to save review in Firestore:", err);
+      console.warn("Failed to save review in Cloud Database:", err);
       setSubmitSuccessMsg("Review submitted (offline fallback simulation).");
       setReviewName("");
       setReviewComment("");

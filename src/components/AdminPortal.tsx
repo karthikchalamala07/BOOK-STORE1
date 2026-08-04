@@ -20,11 +20,13 @@ import { db } from "../services/firebase";
 interface CMSBook extends Book {
   subtitle?: string;
   price: number;
+  digitalPrice?: number;
   discount: number;
   stock: number;
   isAvailable: boolean;
   previewDuration: number;
   isbn: string;
+  publisher?: string;
   galleryUrls: string[];
   seoMetaTitle: string;
   seoMetaDesc: string;
@@ -128,6 +130,54 @@ export default function AdminPortal() {
   const [activeTab, setActiveTab] = useState<string>("Dashboard");
   const [isLoading, setIsLoading] = useState(true);
 
+  // Portal metadata helper for dynamic status
+  const getPortalInfo = (tab: string) => {
+    switch (tab) {
+      case "Books":
+        return {
+          title: "Digital Asset Library",
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+      case "Library CMS":
+        return {
+          title: "Content Repository",
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+      case "Media Library":
+        return {
+          title: "Media Repository",
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+      case "Analytics":
+        return {
+          title: "Live Business Insights",
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+      case "Settings":
+        return {
+          title: "StoryVault Cloud Services",
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+      case "Security":
+        return {
+          title: "User Authentication Portal",
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+      default:
+        return {
+          title: `${tab} Live Portal`,
+          status: "Cloud Services Online",
+          sync: "Live Synchronization Active"
+        };
+    }
+  };
+
   // Databases States
   const [books, setBooks] = useState<CMSBook[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -154,6 +204,16 @@ export default function AdminPortal() {
   const [cmdInput, setCmdInput] = useState("");
   const [selectedBook, setSelectedBook] = useState<CMSBook | null>(null);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+
+  // Books CMS UI Filter & Dialog States
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [languageFilter, setLanguageFilter] = useState("All");
+  const [formatFilter, setFormatFilter] = useState("All");
+  const [featuredFilter, setFeaturedFilter] = useState("All");
+  const [sortOption, setSortOption] = useState("Newest");
+  const [deleteConfirmBook, setDeleteConfirmBook] = useState<CMSBook | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importResults, setImportResults] = useState<any[]>([]);
   const [modalMode, setModalMode] = useState<"create" | "edit" | "preview">("create");
   const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -473,6 +533,194 @@ export default function AdminPortal() {
     { title: "Security", icon: Shield }
   ];
 
+  // Book Duplication Handler
+  const handleDuplicateBook = async (book: CMSBook) => {
+    try {
+      await addDoc(collection(db, "books"), {
+        title: `${book.title} (Copy)`,
+        author: book.author || "Unknown",
+        genre: book.genre || "Classic",
+        year: book.year || 2026,
+        language: book.language || "English",
+        coverUrl: book.coverUrl || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400",
+        description: book.description || "",
+        quote: book.quote || "",
+        chapters: book.chapters || [],
+        price: book.price || 0,
+        digitalPrice: book.digitalPrice || 0,
+        discount: book.discount || 0,
+        stock: book.stock || 0,
+        isAvailable: book.stock > 0,
+        previewDuration: book.previewDuration || 0,
+        isbn: book.isbn ? `${book.isbn}-dup` : "",
+        publisher: book.publisher || "",
+        fullBookPath: book.fullBookPath || "",
+        galleryUrls: book.galleryUrls || [],
+        seoMetaTitle: book.seoMetaTitle || "",
+        seoMetaDesc: book.seoMetaDesc || "",
+        seoCanonical: book.seoCanonical || "",
+        isArchived: book.isArchived || false,
+        isFeatured: false,
+        version: 1
+      });
+      triggerToast(`Book "${book.title}" duplicated successfully.`);
+    } catch (err) {
+      console.warn("Failed to duplicate book:", err);
+    }
+  };
+
+  // Toggle Featured Handler
+  const handleToggleFeatured = async (book: CMSBook) => {
+    try {
+      const bookRef = doc(db, "books", book.id);
+      const nextFeatured = !book.isFeatured;
+      await updateDoc(bookRef, { isFeatured: nextFeatured });
+      triggerToast(`Book "${book.title}" featured status updated.`);
+    } catch (err) {
+      console.warn("Failed to update featured status:", err);
+    }
+  };
+
+  // Export Library Handler
+  const handleExportLibrary = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(books, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "storyvault_library_export.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    triggerToast("Library exported successfully.", "success");
+  };
+
+  // Search and Fetch from Gutenberg & OpenLibrary
+  const handleSearchImport = async () => {
+    if (!importQuery) return;
+    setImportLoading(true);
+    setImportResults([]);
+    try {
+      if (importSource === "OpenLibrary") {
+        const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(importQuery)}&limit=5`);
+        const data = await res.json();
+        const docs = data.docs || [];
+        setImportResults(docs.map((d: any) => ({
+          title: d.title,
+          author: d.author_name ? d.author_name[0] : "Unknown Author",
+          isbn: d.isbn ? d.isbn[0] : "",
+          genre: d.subject ? d.subject[0] : "Classic",
+          year: d.first_publish_year || 2026,
+          coverUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400",
+          description: d.first_sentence ? d.first_sentence[0] : `A literary piece by ${d.author_name ? d.author_name[0] : "Unknown Author"}.`
+        })));
+      } else {
+        const res = await fetch(`https://gutendex.com/books/?search=${encodeURIComponent(importQuery)}`);
+        const data = await res.json();
+        const results = data.results || [];
+        setImportResults(results.slice(0, 5).map((r: any) => ({
+          title: r.title,
+          author: r.authors && r.authors.length > 0 ? r.authors[0].name : "Unknown Author",
+          isbn: "",
+          genre: "Classic",
+          year: 1900,
+          coverUrl: r.formats["image/jpeg"] || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400",
+          description: `Project Gutenberg eBook #${r.id}.`
+        })));
+      }
+    } catch (e) {
+      triggerToast("Failed to search import database.", "error");
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleExecuteImport = async (item: any) => {
+    try {
+      await addDoc(collection(db, "books"), {
+        title: item.title,
+        author: item.author,
+        genre: item.genre,
+        year: item.year,
+        language: "English",
+        coverUrl: item.coverUrl,
+        description: item.description,
+        quote: "",
+        chapters: [
+          { title: "Chapter 1", content: ["The start of a grand classic adventure..."] }
+        ],
+        price: 19.99,
+        digitalPrice: 9.99,
+        discount: 0,
+        stock: 100,
+        isAvailable: true,
+        previewDuration: 15,
+        isbn: item.isbn || "",
+        publisher: "StoryVault Classic Press",
+        fullBookPath: "",
+        galleryUrls: [],
+        seoMetaTitle: item.title,
+        seoMetaDesc: item.description,
+        seoCanonical: "",
+        isArchived: false,
+        isFeatured: false,
+        version: 1
+      });
+      triggerToast(`Successfully imported "${item.title}"!`, "success");
+      setIsImportModalOpen(false);
+    } catch (err) {
+      triggerToast("Failed to import book.", "error");
+    }
+  };
+
+  // Filtered & Sorted books memo
+  const filteredBooks = useMemo(() => {
+    let result = [...books];
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        b => b.title?.toLowerCase().includes(q) || b.author?.toLowerCase().includes(q)
+      );
+    }
+
+    if (categoryFilter !== "All") {
+      result = result.filter(b => b.genre === categoryFilter);
+    }
+
+    if (languageFilter !== "All") {
+      result = result.filter(b => b.language === languageFilter);
+    }
+
+    if (formatFilter !== "All") {
+      if (formatFilter === "Physical") {
+        result = result.filter(b => (b.price || 0) > 0);
+      } else if (formatFilter === "Digital") {
+        result = result.filter(b => (b.digitalPrice || 0) > 0);
+      } else if (formatFilter === "Both") {
+        result = result.filter(b => (b.price || 0) > 0 && (b.digitalPrice || 0) > 0);
+      }
+    }
+
+    if (featuredFilter !== "All") {
+      const targetFeatured = featuredFilter === "Featured";
+      result = result.filter(b => b.isFeatured === targetFeatured);
+    }
+
+    result.sort((a, b) => {
+      if (sortOption === "Newest") {
+        return (b.year || 0) - (a.year || 0);
+      } else if (sortOption === "Oldest") {
+        return (a.year || 0) - (b.year || 0);
+      } else if (sortOption === "A-Z") {
+        return (a.title || "").localeCompare(b.title || "");
+      } else if (sortOption === "Z-A") {
+        return (b.title || "").localeCompare(a.title || "");
+      }
+      return 0;
+    });
+
+    return result;
+  }, [books, searchQuery, categoryFilter, languageFilter, formatFilter, featuredFilter, sortOption]);
+
   // Book CRUD Handlers
   const handleOpenCreateModal = () => {
     setSelectedBook({
@@ -487,11 +735,14 @@ export default function AdminPortal() {
       quote: "",
       chapters: [],
       price: 0,
+      digitalPrice: 0,
       discount: 0,
       stock: 0,
       isAvailable: true,
       previewDuration: 20,
       isbn: "",
+      publisher: "",
+      fullBookPath: "",
       galleryUrls: [],
       seoMetaTitle: "",
       seoMetaDesc: "",
@@ -527,11 +778,14 @@ export default function AdminPortal() {
           quote: selectedBook.quote,
           chapters: selectedBook.chapters || [],
           price: selectedBook.price || 0,
+          digitalPrice: selectedBook.digitalPrice || 0,
           discount: selectedBook.discount || 0,
           stock: selectedBook.stock || 0,
           isAvailable: selectedBook.isAvailable ?? true,
           previewDuration: selectedBook.previewDuration || 0,
           isbn: selectedBook.isbn || "",
+          publisher: selectedBook.publisher || "",
+          fullBookPath: selectedBook.fullBookPath || "",
           galleryUrls: selectedBook.galleryUrls || [],
           seoMetaTitle: selectedBook.seoMetaTitle || "",
           seoMetaDesc: selectedBook.seoMetaDesc || "",
@@ -553,16 +807,19 @@ export default function AdminPortal() {
           description: selectedBook.description,
           quote: selectedBook.quote,
           price: selectedBook.price,
+          digitalPrice: selectedBook.digitalPrice || 0,
           discount: selectedBook.discount,
           stock: selectedBook.stock,
           isAvailable: selectedBook.stock > 0,
           previewDuration: selectedBook.previewDuration,
           isbn: selectedBook.isbn,
+          publisher: selectedBook.publisher || "",
+          fullBookPath: selectedBook.fullBookPath || "",
           seoMetaTitle: selectedBook.seoMetaTitle,
           seoMetaDesc: selectedBook.seoMetaDesc,
           seoCanonical: selectedBook.seoCanonical,
           isArchived: selectedBook.isArchived,
-          isFeatured: selectedBook.isFeatured,
+          isFeatured: selectedBook.isFeatured || false,
           version: (selectedBook.version || 1) + 1
         });
         triggerToast(`Book "${selectedBook.title}" updated successfully.`);
@@ -1058,8 +1315,250 @@ export default function AdminPortal() {
               </div>
             )}
 
-            {/* General Fallback for other tabs */}
-            {!["Dashboard", "Orders", "Reviews", "Customers", "Inventory"].includes(activeTab) && (
+            {/* TAB: BOOKS */}
+            {activeTab === "Books" && (
+              <div className="space-y-6">
+                
+                {/* Header & Quick Action Buttons */}
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D]">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Books Management</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Manage all digital and physical assets, inventory stock levels, and metadata.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={handleOpenCreateModal}
+                      className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus size={14} /> Add Book
+                    </button>
+                    <button
+                      onClick={() => setIsImportModalOpen(true)}
+                      className="bg-[#111111] border border-[#2D2D2D] hover:border-[#C9A227]/30 text-white font-mono text-xs py-2 px-3 rounded flex items-center gap-1 cursor-pointer"
+                    >
+                      <Download size={12} /> Import Books
+                    </button>
+                    <button
+                      onClick={handleExportLibrary}
+                      className="bg-[#111111] border border-[#2D2D2D] hover:border-[#C9A227]/30 text-white font-mono text-xs py-2 px-3 rounded flex items-center gap-1 cursor-pointer"
+                    >
+                      <Upload size={12} /> Export Library
+                    </button>
+                    <button
+                      onClick={() => triggerToast("Database list refreshed.", "success")}
+                      className="bg-[#111111] border border-[#2D2D2D] hover:border-[#C9A227]/30 text-white font-mono text-xs py-2 px-3 rounded flex items-center gap-1 cursor-pointer"
+                    >
+                      <Activity size={12} /> Refresh
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filters & Sorting Panel */}
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3 bg-[#1A1A1A] p-4 rounded border border-[#2D2D2D]">
+                  <div className="md:col-span-2 flex flex-col gap-1">
+                    <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Search Catalog</label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-2.5 text-[#A5A5A5]" size={13} />
+                      <input
+                        type="text"
+                        placeholder="Search title/author..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-[#111111] border border-[#2D2D2D] py-1.5 pl-8 pr-3 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Genre / Category</label>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="bg-[#111111] border border-[#2D2D2D] py-1.5 px-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                    >
+                      <option value="All">All Categories</option>
+                      {Array.from(new Set(books.map(b => b.genre).filter(Boolean))).map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Language</label>
+                    <select
+                      value={languageFilter}
+                      onChange={(e) => setLanguageFilter(e.target.value)}
+                      className="bg-[#111111] border border-[#2D2D2D] py-1.5 px-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                    >
+                      <option value="All">All Languages</option>
+                      {Array.from(new Set(books.map(b => b.language).filter(Boolean))).map(l => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Format & Feature</label>
+                    <select
+                      value={formatFilter}
+                      onChange={(e) => setFormatFilter(e.target.value)}
+                      className="bg-[#111111] border border-[#2D2D2D] py-1.5 px-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                    >
+                      <option value="All">All Formats</option>
+                      <option value="Physical">Physical (Hardcover)</option>
+                      <option value="Digital">Digital (eBook)</option>
+                      <option value="Both">Both Formats</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Sorting</label>
+                    <select
+                      value={sortOption}
+                      onChange={(e) => setSortOption(e.target.value)}
+                      className="bg-[#111111] border border-[#2D2D2D] py-1.5 px-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                    >
+                      <option value="Newest">Newest First</option>
+                      <option value="Oldest">Oldest First</option>
+                      <option value="A-Z">Title A-Z</option>
+                      <option value="Z-A">Title Z-A</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Books dynamic table list */}
+                {filteredBooks.length === 0 ? (
+                  <div className="bg-[#1A1A1A] p-12 rounded border border-dashed border-[#2D2D2D] text-center space-y-4">
+                    <BookOpen size={40} className="text-[#A5A5A5]/40 mx-auto" />
+                    <h3 className="font-serif text-base text-white">No books found.</h3>
+                    <p className="text-xs text-[#A5A5A5] max-w-sm mx-auto">
+                      Add your first book to begin building the library.
+                    </p>
+                    <button
+                      onClick={handleOpenCreateModal}
+                      className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                    >
+                      Add Book
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-[#1A1A1A] rounded border border-[#2D2D2D] overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs min-w-[1000px]">
+                      <thead>
+                        <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                          <th className="p-4 w-12">Cover</th>
+                          <th className="p-4">Title</th>
+                          <th className="p-4">Author</th>
+                          <th className="p-4">Category</th>
+                          <th className="p-4">Language</th>
+                          <th className="p-4">Format</th>
+                          <th className="p-4">Price</th>
+                          <th className="p-4">Stock</th>
+                          <th className="p-4">Digital Status</th>
+                          <th className="p-4">Featured</th>
+                          <th className="p-4">Published</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBooks.map((b) => {
+                          const hasPhysical = (b.price || 0) > 0;
+                          const hasDigital = (b.digitalPrice || 0) > 0;
+                          const bookFormat = hasPhysical && hasDigital ? "Both" : hasPhysical ? "Physical" : hasDigital ? "Digital" : "N/A";
+                          const isFeatured = b.isFeatured || false;
+
+                          return (
+                            <tr key={b.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30 transition-colors">
+                              <td className="p-4">
+                                <img
+                                  src={b.coverUrl || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400"}
+                                  alt={b.title}
+                                  className="w-8 h-10 object-cover rounded border border-[#2D2D2D]"
+                                />
+                              </td>
+                              <td className="p-4 font-semibold text-white max-w-[200px] truncate">{b.title}</td>
+                              <td className="p-4 text-[#A5A5A5] max-w-[150px] truncate">{b.author}</td>
+                              <td className="p-4 font-mono text-[#A5A5A5]">{b.genre}</td>
+                              <td className="p-4 text-[#A5A5A5]">{b.language}</td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                  bookFormat === "Both" ? "bg-amber-950/80 border border-amber-500/30 text-amber-400" :
+                                  bookFormat === "Physical" ? "bg-blue-950/80 border border-blue-500/30 text-blue-400" : "bg-purple-950/80 border border-purple-500/30 text-purple-400"
+                                }`}>
+                                  {bookFormat.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="p-4 font-mono text-white">
+                                {hasPhysical && `P: ₹${b.price} `}
+                                {hasDigital && `D: ₹${b.digitalPrice}`}
+                                {!hasPhysical && !hasDigital && "Free"}
+                              </td>
+                              <td className="p-4 font-mono">
+                                {b.stock <= 10 ? (
+                                  <span className="text-[#F4B400] font-bold">{b.stock} units (Low)</span>
+                                ) : (
+                                  <span className="text-[#A5A5A5]">{b.stock} units</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                  b.isAvailable ? "bg-green-950/80 border border-green-500/30 text-green-400" : "bg-red-950/80 border border-red-500/30 text-red-400"
+                                }`}>
+                                  {b.isAvailable ? "ACTIVE" : "INACTIVE"}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <button
+                                  onClick={() => handleToggleFeatured(b)}
+                                  className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold border transition-colors cursor-pointer ${
+                                    isFeatured 
+                                      ? "bg-amber-950/80 border-amber-500/30 text-amber-400 hover:bg-amber-900" 
+                                      : "bg-[#111111] border-[#2D2D2D] text-[#A5A5A5] hover:border-[#A5A5A5]"
+                                  }`}
+                                >
+                                  {isFeatured ? "FEATURED" : "STANDARD"}
+                                </button>
+                              </td>
+                              <td className="p-4 font-mono text-[#A5A5A5]">{b.year}</td>
+                              <td className="p-4 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    onClick={() => handleOpenEditModal(b)}
+                                    className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-[#111111] rounded cursor-pointer"
+                                    title="Edit Book Profile"
+                                  >
+                                    <Edit size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDuplicateBook(b)}
+                                    className="p-1.5 text-green-400 hover:text-green-300 hover:bg-[#111111] rounded cursor-pointer"
+                                    title="Duplicate Book"
+                                  >
+                                    <Copy size={13} />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmBook(b)}
+                                    className="p-1.5 text-red-400 hover:text-red-300 hover:bg-[#111111] rounded cursor-pointer"
+                                    title="Delete Book"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+                        {/* General Fallback for other tabs */}
+            {!["Dashboard", "Orders", "Reviews", "Customers", "Inventory", "Books"].includes(activeTab) && (
               <div className="bg-[#1A1A1A] p-10 rounded border border-[#2D2D2D] text-center space-y-4">
                 <Sparkles size={40} className="text-[#C9A227] mx-auto opacity-40 animate-pulse" />
                 <h3 className="font-serif text-xl text-white">{activeTab} Live Portal</h3>
@@ -1096,7 +1595,7 @@ export default function AdminPortal() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveBook} className="flex-1 overflow-y-auto pr-2 space-y-6">
+            <form onSubmit={handleSaveBook} className="flex-1 overflow-y-auto pr-2 space-y-5">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
@@ -1126,59 +1625,143 @@ export default function AdminPortal() {
                 <textarea
                   value={selectedBook.description}
                   onChange={(e) => setSelectedBook({ ...selectedBook, description: e.target.value })}
-                  className="bg-[#111111] border border-[#2D2D2D] p-2 h-24 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none resize-none"
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 h-20 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none resize-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-[#2D2D2D] pt-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">ISBN</label>
+                  <input
+                    type="text"
+                    value={selectedBook.isbn || ""}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, isbn: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Category / Genre</label>
+                  <select
+                    value={selectedBook.genre || "Gothic"}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, genre: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  >
+                    {["Gothic", "Adventure", "Philosophy", "Strategy", "Fairy Tales", "Poetry", "Drama", "Sci-Fi", "Satire", "Mystery", "Tragedy", "Historical"].map(g => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Language</label>
+                  <select
+                    value={selectedBook.language || "English"}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, language: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  >
+                    {["English", "French", "German", "Spanish", "Italian", "Greek", "Latin", "Russian"].map(l => (
+                      <option key={l} value={l}>{l}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Publisher</label>
+                  <input
+                    type="text"
+                    value={selectedBook.publisher || ""}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, publisher: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Publication Year</label>
+                  <input
+                    type="number"
+                    value={selectedBook.year || 2026}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, year: parseInt(e.target.value) })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t border-[#2D2D2D] pt-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">List Price ($)</label>
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Physical Price (₹)</label>
                   <input
                     type="number"
                     step="0.01"
-                    value={selectedBook.price}
+                    value={selectedBook.price || 0}
                     onChange={(e) => setSelectedBook({ ...selectedBook, price: parseFloat(e.target.value) })}
                     className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Discount (%)</label>
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Digital Price (₹)</label>
                   <input
                     type="number"
-                    value={selectedBook.discount}
-                    onChange={(e) => setSelectedBook({ ...selectedBook, discount: parseInt(e.target.value) })}
+                    step="0.01"
+                    value={selectedBook.digitalPrice || 0}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, digitalPrice: parseFloat(e.target.value) })}
                     className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Warehouse Stock</label>
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Stock Level</label>
                   <input
                     type="number"
-                    value={selectedBook.stock}
+                    value={selectedBook.stock || 0}
                     onChange={(e) => setSelectedBook({ ...selectedBook, stock: parseInt(e.target.value) })}
                     className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Free Preview Pages</label>
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Preview Pages</label>
                   <input
                     type="number"
-                    value={selectedBook.previewDuration}
+                    value={selectedBook.previewDuration || 0}
                     onChange={(e) => setSelectedBook({ ...selectedBook, previewDuration: parseInt(e.target.value) })}
                     className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Cover Art URL</label>
-                <input
-                  type="text"
-                  value={selectedBook.coverUrl}
-                  onChange={(e) => setSelectedBook({ ...selectedBook, coverUrl: e.target.value })}
-                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-[#C9A227] rounded focus:border-[#C9A227] focus:outline-none"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Cover Image URL</label>
+                  <input
+                    type="text"
+                    value={selectedBook.coverUrl || ""}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, coverUrl: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">eBook Path (PDF/EPUB)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. ebooks/dracula.pdf"
+                    value={selectedBook.fullBookPath || ""}
+                    onChange={(e) => setSelectedBook({ ...selectedBook, fullBookPath: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded focus:border-[#C9A227] focus:outline-none"
+                  />
+                </div>
               </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="featured-checkbox"
+                  checked={selectedBook.isFeatured || false}
+                  onChange={(e) => setSelectedBook({ ...selectedBook, isFeatured: e.target.checked })}
+                  className="bg-[#111111] border border-[#2D2D2D] rounded focus:ring-0 text-[#C9A227] cursor-pointer"
+                />
+                <label htmlFor="featured-checkbox" className="text-xs text-white cursor-pointer font-sans select-none">
+                  Highlight as Featured Literature
+                </label>
+              </div>
+
             </form>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-[#2D2D2D] mt-4 shrink-0">
@@ -1200,6 +1783,104 @@ export default function AdminPortal() {
         </div>
       )}
 
+      {/* DELETE BOOK CONFIRMATION MODAL */}
+      {deleteConfirmBook && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-red-500/40 rounded-lg max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <h3 className="font-serif text-lg text-white">Delete Book?</h3>
+            <p className="text-xs text-[#A5A5A5] leading-relaxed">
+              Are you sure you want to delete <span className="font-semibold text-white">"{deleteConfirmBook.title}"</span>? This action cannot be undone and will remove the item from all catalog listings.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmBook(null)}
+                className="bg-[#111111] border border-[#2D2D2D] hover:border-[#A5A5A5] text-white font-mono text-xs py-2 px-4 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleDeleteBook(deleteConfirmBook.id);
+                  setDeleteConfirmBook(null);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* IMPORT FROM DATABASE MODAL */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-[#C9A227]/50 rounded-lg max-w-xl w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#2D2D2D]">
+              <h3 className="font-serif text-lg text-white">Import Classic Literature</h3>
+              <button onClick={() => setIsImportModalOpen(false)} className="text-[#A5A5A5] hover:text-[#C9A227] cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <p className="text-xs text-[#A5A5A5]">
+                Search public domain literature archives (OpenLibrary and Gutenberg Project) to import records directly to StoryVault.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter title or author (e.g. Dracula)..."
+                  value={importQuery}
+                  onChange={(e) => setImportQuery(e.target.value)}
+                  className="flex-1 bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                />
+                <select
+                  value={importSource}
+                  onChange={(e) => setImportSource(e.target.value as any)}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                >
+                  <option value="OpenLibrary">OpenLibrary</option>
+                  <option value="Gutenberg">Gutenberg</option>
+                </select>
+                <button
+                  onClick={handleSearchImport}
+                  className="bg-[#C9A227] text-black font-mono font-bold text-xs px-4 py-2 rounded hover:bg-[#B89220] cursor-pointer"
+                >
+                  Search
+                </button>
+              </div>
+
+              {importLoading && (
+                <div className="text-center py-4 text-xs font-mono text-[#C9A227] animate-pulse">
+                  Querying remote archive index...
+                </div>
+              )}
+
+              <div className="max-h-60 overflow-y-auto space-y-2 mt-2">
+                {importResults.map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 bg-[#111111] rounded border border-[#2D2D2D] hover:border-[#C9A227]/40">
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{item.title}</h4>
+                      <p className="text-[10px] text-[#A5A5A5] font-mono mt-0.5">{item.author} • {item.year}</p>
+                    </div>
+                    <button
+                      onClick={() => handleExecuteImport(item)}
+                      className="bg-[#1A1A1A] border border-[#2D2D2D] hover:border-green-500/50 hover:text-green-400 font-mono text-[10px] py-1 px-3 rounded cursor-pointer"
+                    >
+                      Import
+                    </button>
+                  </div>
+                ))}
+                {!importLoading && importQuery && importResults.length === 0 && (
+                  <p className="text-center text-[10px] font-mono text-[#A5A5A5] italic py-4">No results found.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

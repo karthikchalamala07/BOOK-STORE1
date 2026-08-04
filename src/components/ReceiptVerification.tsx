@@ -75,7 +75,7 @@ export default function ReceiptVerification() {
           }
         }
       } catch (err) {
-        console.warn("Firestore fetch failed. Checking local fallback:", err);
+        console.warn("Cloud fetch failed. Checking local fallback:", err);
         const local = JSON.parse(localStorage.getItem("storyvault_receipts") || "[]");
         const found = local.find(
           (r: any) => 

@@ -358,7 +358,7 @@ export default function Book3DViewer({
         notes: updatedNotes
       });
     } catch (e) {
-      console.warn("Firestore notes save failed:", e);
+      console.warn("Cloud notes save failed:", e);
     }
     
     addToast({
@@ -387,7 +387,7 @@ export default function Book3DViewer({
       const userId = auth.currentUser?.uid || "guest";
       updateDoc(doc(db, "userLibrary", `${userId}_${book.id}`), { notes: updatedNotes });
     } catch (e) {
-      console.warn("Firestore notes update failed:", e);
+      console.warn("Cloud notes update failed:", e);
     }
   };
 

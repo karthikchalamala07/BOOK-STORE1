@@ -242,7 +242,7 @@ export default function AboutPage() {
               </div>
               <div>
                 <h4 className="font-serif text-base font-bold text-primaryText mb-2">Cloud Powered</h4>
-                <p className="text-secondaryText text-xs font-sans leading-relaxed">Your library, bookmarks, wishlist, and orders stay securely synchronized through Firebase.</p>
+                <p className="text-secondaryText text-xs font-sans leading-relaxed">Your library, bookmarks, wishlist, and orders stay securely synchronized through StoryVault Cloud Services.</p>
               </div>
             </motion.div>
 
@@ -378,9 +378,9 @@ export default function AboutPage() {
             <motion.div variants={cardVariants} className="bg-[#121212] border border-customBorder p-5 rounded-lg flex flex-col justify-between">
               <span className="font-mono text-[9px] text-gold uppercase tracking-wider block">Backend</span>
               <div className="mt-4 space-y-1 font-sans text-xs text-secondaryText">
-                <p className="text-primaryText font-bold">Firebase Auth</p>
-                <p>Cloud Firestore</p>
-                <p>Firebase Storage</p>
+                <p className="text-primaryText font-bold">User Authentication</p>
+                <p>Content Database</p>
+                <p>Digital Asset Library</p>
               </div>
             </motion.div>
 
