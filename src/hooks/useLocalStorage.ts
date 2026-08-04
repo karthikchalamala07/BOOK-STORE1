@@ -8,6 +8,7 @@ export function useFavorites() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
+    if (!auth) return;
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -32,8 +33,8 @@ export function useFavorites() {
     
     setFavorites(newFavorites);
 
-    const user = auth.currentUser;
-    if (user) {
+    const user = auth?.currentUser;
+    if (user && db) {
       try {
         await updateDoc(doc(db, "users", user.uid), { favorites: newFavorites });
       } catch (e) {
@@ -51,6 +52,7 @@ export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState<Record<string, { chapterIndex: number; pageIndex: number }>>({});
 
   useEffect(() => {
+    if (!auth) return;
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -75,8 +77,8 @@ export function useBookmarks() {
     };
     setBookmarks(newBookmarks);
 
-    const user = auth.currentUser;
-    if (user) {
+    const user = auth?.currentUser;
+    if (user && db) {
       try {
         await updateDoc(doc(db, "users", user.uid), { bookmarks: newBookmarks });
       } catch (e) {
@@ -90,8 +92,8 @@ export function useBookmarks() {
     delete newBookmarks[bookId];
     setBookmarks(newBookmarks);
 
-    const user = auth.currentUser;
-    if (user) {
+    const user = auth?.currentUser;
+    if (user && db) {
       try {
         await updateDoc(doc(db, "users", user.uid), { bookmarks: newBookmarks });
       } catch (e) {
@@ -109,6 +111,7 @@ export function useReadingHistory() {
   const [history, setHistory] = useState<ReadingState[]>([]);
 
   useEffect(() => {
+    if (!auth) return;
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -137,8 +140,8 @@ export function useReadingHistory() {
     const newHistory = [newState, ...filtered];
     setHistory(newHistory);
 
-    const user = auth.currentUser;
-    if (user) {
+    const user = auth?.currentUser;
+    if (user && db) {
       try {
         await updateDoc(doc(db, "users", user.uid), { readingHistory: newHistory });
       } catch (e) {
@@ -153,8 +156,8 @@ export function useReadingHistory() {
 
   const clearHistory = async () => {
     setHistory([]);
-    const user = auth.currentUser;
-    if (user) {
+    const user = auth?.currentUser;
+    if (user && db) {
       try {
         await updateDoc(doc(db, "users", user.uid), { readingHistory: [] });
       } catch (e) {

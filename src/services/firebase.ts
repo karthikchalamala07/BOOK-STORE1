@@ -1,19 +1,47 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth } from "firebase/auth";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyFakeKey_ForBookOSDevelopmentOnly",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "storyvault-bookos.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "storyvault-bookos",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "storyvault-bookos.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1234567890:web:fakeapp"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-import { getStorage } from "firebase/storage";
-export const storage = getStorage(app);
+export let app: any = null;
+export let db: Firestore = null as any;
+export let auth: Auth = null as any;
+export let storage: FirebaseStorage = null as any;
+export let isFirebaseConfigValid = true;
+export let firebaseInitializationError: string | null = null;
+
+// Audit checks for missing configuration or local placeholders
+const isConfigMissing = 
+  !firebaseConfig.apiKey || 
+  firebaseConfig.apiKey.trim() === "" || 
+  firebaseConfig.apiKey.includes("FakeKey") || 
+  !firebaseConfig.projectId || 
+  firebaseConfig.projectId.trim() === "";
+
+if (isConfigMissing) {
+  isFirebaseConfigValid = false;
+  firebaseInitializationError = "Firebase configuration variables are missing or using placeholder values.";
+  console.warn("Firebase config is invalid. STORYVAULT runs in local offline preservation mode.");
+} else {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
+    storage = getStorage(app);
+  } catch (err: any) {
+    isFirebaseConfigValid = false;
+    firebaseInitializationError = err.message || "Failed to initialize Firebase app.";
+    console.error("Firebase Initialization Exception:", err);
+  }
+}
+
 export default app;

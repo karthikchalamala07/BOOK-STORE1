@@ -5,7 +5,7 @@ import { Shield, Mail, Lock, Check, Sparkles, AlertTriangle } from "lucide-react
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const { adminLogin, currentAdmin } = useBookstore();
+  const { adminLogin, currentAdmin, isFirebaseConfigValid } = useBookstore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,6 +68,25 @@ export default function AdminLogin() {
             <div className="mb-5 p-3 rounded-lg border border-red-500/25 bg-red-950/20 text-red-400 text-xs font-mono flex items-start space-x-2">
               <AlertTriangle size={14} className="shrink-0 mt-0.5" />
               <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {!isFirebaseConfigValid && (
+            <div className="mb-5 p-4 rounded-xl border border-gold/30 bg-gold/5 text-gold text-xs leading-relaxed font-sans text-left">
+              <div className="flex items-center gap-2 text-gold font-bold mb-1.5 font-serif text-sm">
+                <svg className="w-4 h-4 text-gold shrink-0 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span>Cloud Preservation Offline</span>
+              </div>
+              <p className="text-[#A5A5A5] text-[11px] mb-2 leading-relaxed">
+                StoryVault is currently running in local offline mode because Firebase credentials are missing or invalid.
+              </p>
+              <p className="text-gold font-mono text-[9px] uppercase tracking-wider">
+                Use default test credentials below to log in.
+              </p>
             </div>
           )}
 

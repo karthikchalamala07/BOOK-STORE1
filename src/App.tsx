@@ -67,7 +67,7 @@ function AppContent() {
   const { history, updateReadingProgress, clearHistory } = useReadingHistory();
 
   // Load live books, cart, and wishlist from BookstoreProvider
-  const { books, cart, wishlist, toasts, removeToast, fetchUserLibrary, currentUser, currentAdmin, currentUserProfile, isAuthLoading } = useBookstore();
+  const { books, cart, wishlist, toasts, removeToast, fetchUserLibrary, currentUser, currentAdmin, currentUserProfile, isAuthLoading, isFirebaseConfigValid, firebaseInitializationError } = useBookstore();
 
   const [unlockedBookIds, setUnlockedBookIds] = useState<string[]>([]);
   

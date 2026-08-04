@@ -12,7 +12,7 @@ export interface ToastMessage {
   buttons?: { label: string; onClick: () => void }[];
 }
 import { signInAnonymously, onAuthStateChanged, User as FirebaseUser, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { db, auth } from "../services/firebase";
+import { db, auth, isFirebaseConfigValid, firebaseInitializationError } from "../services/firebase";
 import { Book } from "../types";
 import { resolveBookCover } from "../services/coverService";
 
@@ -46,6 +46,8 @@ interface BookstoreContextType {
   shippingDetails: ShippingDetails | null;
   currentUser: FirebaseUser | null;
   currentUserProfile: any;
+  isFirebaseConfigValid: boolean;
+  firebaseInitializationError: string | null;
   currentAdmin: any;
   isAuthLoading: boolean;
   toasts: ToastMessage[];
@@ -115,6 +117,10 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Initialize Authentication and User Sync
   useEffect(() => {
+    if (!auth) {
+      setIsAuthLoading(false);
+      return;
+    }
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
@@ -192,6 +198,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
   // 2. Real-time Books Sync and Seeding
   useEffect(() => {
+    if (!db) return;
     const unsubBooks = onSnapshot(collection(db, "books"), async (snap) => {
       const featuredTargetIds = ["dracula", "pride-and-prejudice", "sherlock-holmes", "the-count-of-monte-cristo"];
       const existingIds: string[] = [];
@@ -895,8 +902,55 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
   };
 
 
+
+  // Helper to translate technical Firebase authentication errors into user-friendly notifications
+  const getFriendlyAuthError = (err: any): string => {
+    console.error("Technical Firebase Auth Error:", err);
+    const code = err?.code || "";
+    const msg = err?.message || "";
+    
+    if (code.includes("api-key-not-valid") || msg.includes("api-key-not-valid") || code.includes("invalid-api-key")) {
+      return "Unable to sign in. Please try again later or contact support.";
+    }
+    if (code.includes("wrong-password") || code.includes("user-not-found") || code.includes("invalid-credential")) {
+      return "Invalid email or password. Please verify credentials.";
+    }
+    if (code.includes("email-already-in-use")) {
+      return "This email is already registered. Please sign in instead.";
+    }
+    if (code.includes("weak-password")) {
+      return "Password is too weak. Please use at least 6 characters.";
+    }
+    return "Unable to sign in. Please try again later or contact support.";
+  };
+
   // --- CUSTOMER SIGNUP ---
   const customerSignup = async (fullName: string, email: string, password: string) => {
+    if (!isFirebaseConfigValid) {
+      const mockProfile = {
+        uid: "local-mock-customer-uid",
+        name: fullName,
+        email: email,
+        role: "customer",
+        cart: [],
+        wishlist: [],
+        purchasedBooks: [],
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUserProfile(mockProfile);
+      setCurrentUser({
+        uid: "local-mock-customer-uid",
+        email: email,
+        displayName: fullName,
+        isAnonymous: false
+      } as any);
+      addToast({
+        title: "Account Created (Offline)",
+        message: `Welcome to StoryVault, ${fullName}!`
+      });
+      return { success: true };
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -918,13 +972,37 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       });
       return { success: true };
     } catch (err: any) {
-      console.error(err);
-      return { success: false, error: err.message || "Failed to create account." };
+      return { success: false, error: getFriendlyAuthError(err) };
     }
   };
 
   // --- CUSTOMER LOGIN ---
   const customerLogin = async (email: string, password: string, rememberMe: boolean) => {
+    if (!isFirebaseConfigValid) {
+      const mockProfile = {
+        uid: "local-mock-customer-uid",
+        name: "Guest Reader",
+        email: email,
+        role: "customer",
+        cart: [],
+        wishlist: [],
+        purchasedBooks: [],
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUserProfile(mockProfile);
+      setCurrentUser({
+        uid: "local-mock-customer-uid",
+        email: email,
+        displayName: "Guest Reader",
+        isAnonymous: false
+      } as any);
+      addToast({
+        title: "Login Successful (Offline)",
+        message: "Welcome back to StoryVault!"
+      });
+      return { success: true };
+    }
+
     try {
       await signInWithEmailAndPassword(auth, email, password);
       addToast({
@@ -933,13 +1011,22 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       });
       return { success: true };
     } catch (err: any) {
-      console.error(err);
-      return { success: false, error: err.message || "Invalid credentials." };
+      return { success: false, error: getFriendlyAuthError(err) };
     }
   };
 
   // --- CUSTOMER LOGOUT ---
   const customerLogout = async () => {
+    if (!isFirebaseConfigValid) {
+      setCurrentUserProfile(null);
+      setCurrentUser(null);
+      addToast({
+        title: "Logged Out",
+        message: "Preservation profile disconnected successfully (Offline Mode)."
+      });
+      return;
+    }
+
     try {
       await signOut(auth);
       setCurrentUserProfile(null);
@@ -954,6 +1041,31 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
   // --- GOOGLE SIGN IN ---
   const loginWithGoogle = async () => {
+    if (!isFirebaseConfigValid) {
+      const mockProfile = {
+        uid: "local-mock-google-uid",
+        name: "Google Reader",
+        email: "google@storyvault.com",
+        role: "customer",
+        cart: [],
+        wishlist: [],
+        purchasedBooks: [],
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUserProfile(mockProfile);
+      setCurrentUser({
+        uid: "local-mock-google-uid",
+        email: "google@storyvault.com",
+        displayName: "Google Reader",
+        isAnonymous: false
+      } as any);
+      addToast({
+        title: "Google Sync (Offline)",
+        message: "Signed in successfully with Google."
+      });
+      return { success: true };
+    }
+
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -980,13 +1092,46 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       });
       return { success: true };
     } catch (err: any) {
-      console.error(err);
-      return { success: false, error: err.message || "Google Authentication failed." };
+      return { success: false, error: getFriendlyAuthError(err) };
     }
   };
 
   // --- ADMIN LOGIN (WITH SELF-HEALING DEFAULT SEEDING) ---
   const adminLogin = async (email: string, password: string, rememberMe: boolean) => {
+    if (!isFirebaseConfigValid) {
+      const defaultAdmins: Record<string, { role: string; name: string; pass: string }> = {
+        "superadmin@storyvault.com": { role: "Super Admin", name: "Victoria Rex", pass: "SuperAdmin123!" },
+        "content@storyvault.com": { role: "Content Manager", name: "Clara Page", pass: "Content123!" },
+        "inventory@storyvault.com": { role: "Inventory Manager", name: "Marcus Stock", pass: "Inventory123!" },
+        "orders@storyvault.com": { role: "Order Manager", name: "David Parcel", pass: "Orders123!" },
+        "analytics@storyvault.com": { role: "Analytics Viewer", name: "Elena Chart", pass: "Analytics123!" }
+      };
+
+      if (defaultAdmins[email] && defaultAdmins[email].pass === password) {
+        const adminData = {
+          uid: "local-mock-admin-uid",
+          name: defaultAdmins[email].name,
+          email: email,
+          role: defaultAdmins[email].role,
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        };
+        setCurrentAdmin(adminData);
+        if (rememberMe) {
+          localStorage.setItem("storyvault_admin", JSON.stringify(adminData));
+        } else {
+          sessionStorage.setItem("storyvault_admin", JSON.stringify(adminData));
+        }
+        addToast({
+          title: "CMS Authorized (Offline)",
+          message: `Logged in locally as ${adminData.name} (${adminData.role})`
+        });
+        return { success: true };
+      } else {
+        return { success: false, error: "Invalid administrator credentials." };
+      }
+    }
+
     try {
       let userCredential;
       try {
@@ -1044,13 +1189,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       });
       return { success: true };
     } catch (err: any) {
-      console.error(err);
-      return { success: false, error: err.message || "Invalid administrator credentials." };
+      return { success: false, error: getFriendlyAuthError(err) };
     }
   };
 
   // --- ADMIN LOGOUT ---
   const adminLogout = async () => {
+    if (!isFirebaseConfigValid) {
+      setCurrentAdmin(null);
+      localStorage.removeItem("storyvault_admin");
+      sessionStorage.removeItem("storyvault_admin");
+      addToast({
+        title: "CMS Session Closed",
+        message: "Administrator session terminated (Offline Mode)."
+      });
+      return;
+    }
+
     try {
       setCurrentAdmin(null);
       localStorage.removeItem("storyvault_admin");
@@ -1093,6 +1248,8 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     verifyAndActivateCode,
     fetchUserLibrary,
     saveReadingProgress,
+    isFirebaseConfigValid,
+    firebaseInitializationError,
     customerSignup,
     customerLogin,
     customerLogout,
@@ -1112,6 +1269,8 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     isAuthLoading,
     toasts,
     receipts,
+    isFirebaseConfigValid,
+    firebaseInitializationError,
     customerSignup,
     customerLogin,
     customerLogout,
