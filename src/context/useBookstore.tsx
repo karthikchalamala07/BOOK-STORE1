@@ -1,0 +1,901 @@
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { 
+  collection, doc, getDoc, setDoc, updateDoc, onSnapshot, 
+  addDoc, runTransaction, getDocs, writeBatch, query, where 
+} from "firebase/firestore";
+
+export interface ToastMessage {
+  id: string;
+  title: string;
+  message: string;
+  duration?: number;
+  buttons?: { label: string; onClick: () => void }[];
+}
+import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { db, auth } from "../services/firebase";
+import { Book } from "../types";
+import { resolveBookCover } from "../services/coverService";
+
+export interface CartItem {
+  book: Book;
+  format: "physical" | "ebook";
+  price: number;
+  quantity: number;
+}
+
+export interface Coupon {
+  code: string;
+  discount: number; // e.g. 0.2 for 20%
+}
+
+export interface ShippingDetails {
+  fullName: string;
+  email: string;
+  addressLine: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
+interface BookstoreContextType {
+  books: Book[];
+  cart: CartItem[];
+  wishlist: string[];
+  purchasedBooks: string[];
+  activeCoupon: Coupon | null;
+  shippingDetails: ShippingDetails | null;
+  currentUser: FirebaseUser | null;
+  toasts: ToastMessage[];
+  receipts: any[];
+  addToast: (toast: Omit<ToastMessage, "id">) => void;
+  removeToast: (id: string) => void;
+  addToCart: (book: Book, format: "physical" | "ebook", price: number) => void;
+  removeFromCart: (bookId: string, format: "physical" | "ebook") => void;
+  clearCart: () => void;
+  toggleWishlist: (bookId: string) => void;
+  isInWishlist: (bookId: string) => boolean;
+  applyCoupon: (code: string) => boolean;
+  removeCoupon: () => void;
+  saveShipping: (details: ShippingDetails) => void;
+  checkout: () => Promise<{ success: boolean; orderId: string; receipt?: any }>;
+  downloadBook: (receiptId: string, bookId: string) => Promise<void>;
+  verifyAndActivateCode: (code: string) => Promise<{ success: boolean; book?: Book; message: string; codeDetails?: any }>;
+  fetchUserLibrary: () => Promise<any[]>;
+  saveReadingProgress: (bookId: string, chapterIndex: number, pageIndex: number) => Promise<void>;
+}
+
+const BookstoreContext = createContext<BookstoreContextType | undefined>(undefined);
+
+export function BookstoreProvider({ children }: { children: React.ReactNode }) {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [purchasedBooks, setPurchasedBooks] = useState<string[]>([]);
+  const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(null);
+  const [shippingDetails, setShippingDetails] = useState<ShippingDetails | null>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [receipts, setReceipts] = useState<any[]>([]);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (toast: Omit<ToastMessage, "id">) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    const duration = toast.duration || 3500;
+    const newToast = { id, ...toast };
+    setToasts(prev => [...prev, newToast]);
+    setTimeout(() => {
+      removeToast(id);
+    }, duration);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // 1. Initialize Authentication and User Sync
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        
+        // Sync user document
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            name: "Guest Reader",
+            email: user.email || "guest@storyvault.com",
+            role: "customer",
+            cart: [],
+            wishlist: [],
+            purchasedBooks: [],
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        // Setup real-time listener for user profile sync
+        const unsubUserDoc = onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setCart(data.cart || []);
+            setWishlist(data.wishlist || []);
+            setPurchasedBooks(data.purchasedBooks || []);
+          }
+        });
+
+        // Setup real-time listener for customer invoices
+        const receiptsQuery = query(collection(db, "receipts"), where("customerId", "==", user.uid));
+        const unsubReceipts = onSnapshot(receiptsQuery, (snap) => {
+          const fetched: any[] = [];
+          snap.forEach(docSnap => {
+            fetched.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          setReceipts(fetched);
+        });
+
+        return () => {
+          unsubUserDoc();
+          unsubReceipts();
+        };
+      } else {
+        // Sign in anonymously if no session active
+        signInAnonymously(auth).catch(err => {
+          console.warn("Firebase sign in failed: ", err);
+        });
+      }
+    });
+
+    return () => unsubAuth();
+  }, []);
+
+  // Setup fallback local storage receipts for guest / offline users
+  useEffect(() => {
+    if (!currentUser) {
+      const local = JSON.parse(localStorage.getItem("storyvault_receipts") || "[]");
+      setReceipts(local);
+    }
+  }, [currentUser]);
+
+  // 2. Real-time Books Sync and Seeding
+  useEffect(() => {
+    const unsubBooks = onSnapshot(collection(db, "books"), async (snap) => {
+      const featuredTargetIds = ["dracula", "pride-and-prejudice", "sherlock-holmes", "the-count-of-monte-cristo"];
+      const existingIds: string[] = [];
+      
+      snap.forEach(dSnap => {
+        existingIds.push(dSnap.id);
+      });
+
+      const missingFeatured = featuredTargetIds.some(id => !existingIds.includes(id));
+
+      if (snap.size < 100 || missingFeatured) {
+        try {
+          const { CLASSICS_DATABASE } = await import("../services/booksDb");
+          const batch = writeBatch(db);
+          
+          for (const b of CLASSICS_DATABASE) {
+            const cover = resolveBookCover(b);
+            const bookRef = doc(db, "books", b.id);
+            const seedBook = {
+              title: b.title,
+              author: b.author,
+              description: b.description,
+              genre: b.genre,
+              language: b.language || (b as any).lang || "English",
+              publicationYear: b.year,
+              year: b.year,
+              coverImage: cover,
+              coverUrl: cover,
+              rating: 4.9,
+              featured: featuredTargetIds.includes(b.id),
+              isFeatured: featuredTargetIds.includes(b.id),
+              price: featuredTargetIds.includes(b.id) ? 14.99 : 9.99,
+              previewAvailable: true,
+              previewDuration: 20,
+              stock: featuredTargetIds.includes(b.id) ? 25 : 50,
+              isAvailable: true,
+              isbn: `978-0-14-1439-${b.id}-7`,
+              galleryUrls: [cover],
+              seoMetaTitle: `${b.title} | STORYVAULT Editions`,
+              seoMetaDesc: `Explore the premium editorial print of ${b.title} in STORYVAULT.`,
+              seoCanonical: `https://storyvault.com/books/${b.id}`,
+              isArchived: false,
+              version: 1,
+              chapters: b.chapters || [],
+              previewContent: b.chapters || [],
+              fullBookPath: `ebooks/${b.id}.txt`,
+              totalPages: 150,
+              storagePath: `ebooks/${b.id}.pdf`,
+              downloadURL: `https://firebasestorage.googleapis.com/v0/b/storyvault-bookos.appspot.com/o/ebooks%2F${b.id}.pdf?alt=media`,
+              previewURL: `https://firebasestorage.googleapis.com/v0/b/storyvault-bookos.appspot.com/o/previews%2F${b.id}.pdf?alt=media`,
+              bookType: "Digital",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            batch.set(bookRef, seedBook);
+          }
+          await batch.commit();
+        } catch (seedErr) {
+          console.error("Failed to seed books to Firestore:", seedErr);
+        }
+      } else {
+        const fetched: Book[] = [];
+        snap.forEach(docSnap => {
+          fetched.push({ id: docSnap.id, ...docSnap.data() } as Book);
+        });
+        setBooks(fetched);
+      }
+    });
+
+    return () => unsubBooks();
+  }, []);
+
+  // 3. Sync actions back to Firestore
+  const updateFirestoreUser = async (newCart: CartItem[], newWishlist?: string[]) => {
+    if (!currentUser) return;
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      const updates: any = { cart: newCart };
+      if (newWishlist) updates.wishlist = newWishlist;
+      await updateDoc(userRef, updates);
+    } catch (e) {
+      console.warn("Offline fallback state active:", e);
+    }
+  };
+
+  const addToCart = (book: Book, format: "physical" | "ebook", price: number) => {
+    const newCart = [...cart];
+    const existingIdx = newCart.findIndex(item => item.book.id === book.id && item.format === format);
+    if (existingIdx > -1) {
+      newCart[existingIdx].quantity += 1;
+    } else {
+      newCart.push({ book, format, price, quantity: 1 });
+    }
+    setCart(newCart);
+    updateFirestoreUser(newCart);
+    addToast({
+      title: "✓ Added to Cart",
+      message: `"${book.title}" (${format === "physical" ? "Leather Hardcover" : "Digital eBook"}) has been added to your cart.`
+    });
+  };
+
+  const removeFromCart = (bookId: string, format: "physical" | "ebook") => {
+    const bookTitle = cart.find(item => item.book.id === bookId && item.format === format)?.book.title || "Book";
+    const newCart = cart.filter(item => !(item.book.id === bookId && item.format === format));
+    setCart(newCart);
+    updateFirestoreUser(newCart);
+    addToast({
+      title: "✓ Removed from Cart",
+      message: `"${bookTitle}" has been removed from your cart.`
+    });
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    updateFirestoreUser([]);
+  };
+
+  const toggleWishlist = (bookId: string) => {
+    const newWishlist = wishlist.includes(bookId)
+      ? wishlist.filter(id => id !== bookId)
+      : [...wishlist, bookId];
+    setWishlist(newWishlist);
+    updateFirestoreUser(cart, newWishlist);
+  };
+
+  const isInWishlist = (bookId: string) => wishlist.includes(bookId);
+
+  const applyCoupon = (code: string): boolean => {
+    const cleanCode = code.trim().toUpperCase();
+    if (cleanCode === "WELCOME20") {
+      setActiveCoupon({ code: "WELCOME20", discount: 0.20 });
+      return true;
+    } else if (cleanCode === "PRESERVATION") {
+      setActiveCoupon({ code: "PRESERVATION", discount: 0.30 });
+      return true;
+    }
+    return false;
+  };
+
+  const removeCoupon = () => setActiveCoupon(null);
+
+  const saveShipping = (details: ShippingDetails) => setShippingDetails(details);
+
+  const checkout = async () => {
+    const orderId = `SV-${Math.floor(100000 + Math.random() * 900000)}`;
+    const itemsTotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+    const totalWithTax = parseFloat((itemsTotal + 6.50).toFixed(2));
+
+    const orderDoc = {
+      id: orderId,
+      orderId,
+      userId: currentUser?.uid || "guest",
+      customerName: shippingDetails?.fullName || "Guest Reader",
+      customerEmail: shippingDetails?.email || "guest@storyvault.com",
+      customerPhone: "9876543210",
+      items: cart.map(item => ({
+        bookId: item.book.id,
+        title: item.book.title,
+        price: item.price,
+        quantity: item.quantity,
+        cover: item.book.coverUrl
+      })),
+      subtotal: parseFloat(itemsTotal.toFixed(2)),
+      tax: 1.50,
+      shipping: 5.00,
+      total: totalWithTax,
+      paymentMethod: "Card",
+      paymentStatus: "Paid",
+      orderStatus: "Confirmed" as const,
+      shippingAddress: shippingDetails 
+        ? `${shippingDetails.addressLine}, ${shippingDetails.city}, ${shippingDetails.postalCode}, ${shippingDetails.country}`
+        : "Store Pickup",
+      createdAt: new Date().toISOString().replace("T", " ").slice(0, 19),
+      updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19)
+    };
+
+    // Generate receipt document details
+    const hasPhysical = cart.some(item => item.format === "physical");
+    const hasDigital = cart.some(item => item.format === "ebook");
+    
+    const now = new Date();
+    const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, "");
+    
+    // Receipt numbers are generated only for orders with physical books
+    const receiptNumber = hasPhysical 
+      ? `SVR-${yyyymmdd}-${Math.floor(100000 + Math.random() * 900000)}` 
+      : "";
+      
+    // Digital access codes are generated only for orders with digital books
+    const digitalAccessCode = hasDigital 
+      ? `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}` 
+      : "";
+
+    const receiptId = `RCP-${Math.floor(100000 + Math.random() * 900000)}`;
+    const receiptDoc = {
+      receiptId,
+      orderId,
+      customerId: currentUser?.uid || "guest",
+      customerName: shippingDetails?.fullName || "Guest Reader",
+      customerEmail: shippingDetails?.email || "guest@storyvault.com",
+      bookId: cart[0]?.book.id || "mixed",
+      books: cart.map(item => ({
+        bookId: item.book.id,
+        title: item.book.title,
+        cover: item.book.coverUrl,
+        format: item.format,
+        price: item.price,
+        quantity: item.quantity,
+        digitalAccessCode: item.format === "ebook" ? `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}` : ""
+      })),
+      receiptNumber,
+      digitalAccessCode,
+      bookType: hasPhysical && hasDigital ? "Mixed" : hasPhysical ? "Physical" : "Digital",
+      paymentStatus: "Paid",
+      amount: totalWithTax,
+      createdAt: new Date().toISOString(),
+      shippingAddress: orderDoc.shippingAddress
+    };
+
+    try {
+      // 1. Transaction to Decrement Inventory and trigger notifications
+      await runTransaction(db, async (transaction) => {
+        for (const item of cart) {
+          const bookRef = doc(db, "books", item.book.id);
+          const bookSnap = await transaction.get(bookRef);
+          if (bookSnap.exists()) {
+            const currentStock = bookSnap.data().stock || 0;
+            const newStock = Math.max(0, currentStock - item.quantity);
+            transaction.update(bookRef, { 
+              stock: newStock,
+              isAvailable: newStock > 0
+            });
+
+            // If stock <= 10, generate low stock alert notification
+            if (newStock <= 10) {
+              const notificationRef = doc(collection(db, "notifications"));
+              transaction.set(notificationRef, {
+                id: notificationRef.id,
+                type: "inventory",
+                title: `Low Stock Alert: ${item.book.title}`,
+                message: `${item.book.title} inventory has dropped to ${newStock} units.`,
+                read: false,
+                createdAt: new Date().toISOString()
+              });
+            }
+          }
+        }
+      });
+
+      // 2. Save Order to Firestore
+      await setDoc(doc(db, "orders", orderId), orderDoc);
+
+      // Save Receipt to Firestore receipts subcollection
+      await setDoc(doc(db, "receipts", receiptId), receiptDoc);
+
+      // Generate and save activation codes for each digital ebook in the cart
+      for (const item of cart) {
+        if (item.format === "ebook") {
+          const activationCode = receiptDoc.digitalAccessCode || `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          const vaultCodeDoc = {
+            activationCode,
+            customerId: currentUser?.uid || "guest",
+            bookId: item.book.id,
+            orderId,
+            receiptId,
+            status: "AVAILABLE",
+            activatedBy: "",
+            activatedAt: "",
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(doc(db, "activationCodes", activationCode), vaultCodeDoc);
+
+          // Auto activation: immediately add to user's digital library
+          if (currentUser) {
+            const libDoc = {
+              bookId: item.book.id,
+              activatedAt: new Date().toISOString(),
+              readingProgress: 0,
+              lastOpened: new Date().toISOString(),
+              bookmarks: [],
+              notes: []
+            };
+            await setDoc(doc(db, "users", currentUser.uid, "digitalLibrary", item.book.id), libDoc);
+            
+            // Sync local storage library
+            const localLibKey = `storyvault_users_${currentUser.uid}_digital_library`;
+            const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+            if (!localLib.some((libItem: any) => libItem.bookId === item.book.id)) {
+              localLib.push(libDoc);
+              localStorage.setItem(localLibKey, JSON.stringify(localLib));
+            }
+          }
+        }
+      }
+
+      // 3. Create Admin Order Notification
+      const adminNotifRef = doc(collection(db, "notifications"));
+      await setDoc(adminNotifRef, {
+        id: adminNotifRef.id,
+        type: "order",
+        title: "New Bookstore Purchase",
+        message: `${orderDoc.customerName} placed order ${orderId} for a total of $${orderDoc.total}`,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
+      // 4. Update real-time analytics summary
+      const analyticsRef = doc(db, "analytics", "summary");
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(analyticsRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          transaction.update(analyticsRef, {
+            revenue: (data.revenue || 0) + orderDoc.total,
+            ordersCount: (data.ordersCount || 0) + 1,
+            customersCount: (data.customersCount || 0) + 1
+          });
+        } else {
+          transaction.set(analyticsRef, {
+            revenue: orderDoc.total,
+            ordersCount: 1,
+            customersCount: 1,
+            visitors: 24,
+            previewConversions: 5
+          });
+        }
+      });
+
+      // 5. Update user purchased book IDs in Firestore
+      const newlyPurchased = cart.map(item => item.book.id);
+      if (currentUser) {
+        const userRef = doc(db, "users", currentUser.uid);
+        const updatedPurchased = [...purchasedBooks];
+        newlyPurchased.forEach(id => {
+          if (!updatedPurchased.includes(id)) {
+            updatedPurchased.push(id);
+          }
+        });
+        await updateDoc(userRef, {
+          purchasedBooks: updatedPurchased,
+          cart: [] // empty cart in firestore
+        });
+        setPurchasedBooks(updatedPurchased);
+      }
+
+    } catch (checkoutErr) {
+      console.warn("Firestore checkout failed. Using offline fallback:", checkoutErr);
+      
+      // Fallback local storage orders list
+      const localOrders = JSON.parse(localStorage.getItem("storyvault_orders") || "[]");
+      localOrders.push(orderDoc);
+      localStorage.setItem("storyvault_orders", JSON.stringify(localOrders));
+
+      // Fallback local storage notifications
+      const localNotifs = JSON.parse(localStorage.getItem("storyvault_notifications") || "[]");
+      localNotifs.push({
+        id: `notif-${Date.now()}`,
+        type: "order",
+        title: "New Bookstore Purchase",
+        message: `${orderDoc.customerName} placed order ${orderId} for a total of $${orderDoc.total}`,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem("storyvault_notifications", JSON.stringify(localNotifs));
+
+      // Fallback local storage analytics
+      const localAnalytics = JSON.parse(localStorage.getItem("storyvault_analytics") || '{"revenue":0,"ordersCount":0,"visitors":24,"customersCount":0,"previewConversions":5}');
+      localAnalytics.revenue += orderDoc.total;
+      localAnalytics.ordersCount += 1;
+      localStorage.setItem("storyvault_analytics", JSON.stringify(localAnalytics));
+
+      // Fallback local receipts
+      const localReceipts = JSON.parse(localStorage.getItem("storyvault_receipts") || "[]");
+      localReceipts.push(receiptDoc);
+      localStorage.setItem("storyvault_receipts", JSON.stringify(localReceipts));
+      setReceipts(prev => [...prev, receiptDoc]);
+
+      // Fallback local activation codes
+      const localVaultCodes = JSON.parse(localStorage.getItem("storyvault_activation_codes") || "[]");
+      for (const item of cart) {
+        if (item.format === "ebook") {
+          const vaultCodeDoc = {
+            activationCode: receiptDoc.digitalAccessCode || `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+            customerId: currentUser?.uid || "guest",
+            bookId: item.book.id,
+            orderId,
+            receiptId,
+            status: "AVAILABLE",
+            activatedBy: "",
+            activatedAt: "",
+            createdAt: new Date().toISOString()
+          };
+          localVaultCodes.push(vaultCodeDoc);
+
+          // Auto activation for local fallback
+          if (currentUser) {
+            const libDoc = {
+              bookId: item.book.id,
+              activatedAt: new Date().toISOString(),
+              readingProgress: 0,
+              lastOpened: new Date().toISOString(),
+              bookmarks: [],
+              notes: []
+            };
+            const localLibKey = `storyvault_users_${currentUser.uid}_digital_library`;
+            const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+            if (!localLib.some((libItem: any) => libItem.bookId === item.book.id)) {
+              localLib.push(libDoc);
+              localStorage.setItem(localLibKey, JSON.stringify(localLib));
+            }
+          }
+        }
+      }
+      localStorage.setItem("storyvault_activation_codes", JSON.stringify(localVaultCodes));
+
+      // Dispatch simulated StorageEvent manually for same-tab updates
+      window.dispatchEvent(new Event("storage"));
+
+      const newlyPurchased = cart.map(item => item.book.id);
+      setPurchasedBooks(prev => {
+        const updated = [...prev];
+        newlyPurchased.forEach(id => {
+          if (!updated.includes(id)) updated.push(id);
+        });
+        return updated;
+      });
+    }
+
+    clearCart();
+    removeCoupon();
+    return { success: true, orderId, receipt: receiptDoc };
+  };
+
+  const verifyAndActivateCode = async (code: string): Promise<{ success: boolean; book?: Book; message: string; codeDetails?: any; alreadyRedeemedBySelf?: boolean }> => {
+    const cleanCode = code.trim().toUpperCase();
+    const uid = currentUser?.uid || "guest";
+    
+    try {
+      const { getDoc, doc, setDoc, updateDoc } = await import("firebase/firestore");
+      
+      let codeDoc = null;
+      let isLocal = false;
+
+      // Check local storage first for instant offline/local resolution
+      const local = JSON.parse(localStorage.getItem("storyvault_activation_codes") || "[]");
+      const foundLocal = local.find((c: any) => c.activationCode === cleanCode);
+      
+      if (foundLocal) {
+        codeDoc = foundLocal;
+        isLocal = true;
+      } else {
+        try {
+          const docRef = doc(db, "activationCodes", cleanCode);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            codeDoc = docSnap.data();
+          }
+        } catch (dbErr) {
+          console.warn("Firestore fetch failed, checking local storage fallback:", dbErr);
+        }
+      }
+
+      if (!codeDoc) {
+        return { success: false, message: "This activation code does not exist." };
+      }
+
+      // Check customer ownership
+      if (codeDoc.customerId !== "guest" && codeDoc.customerId !== uid) {
+        return { success: false, message: "This activation code belongs to another customer." };
+      }
+
+      // Check status states
+      if (codeDoc.status === "REDEEMED") {
+        if (codeDoc.activatedBy === uid) {
+          const targetBook = books.find(b => b.id === codeDoc.bookId);
+          return {
+            success: true,
+            alreadyRedeemedBySelf: true,
+            book: targetBook,
+            message: "This book is already in your Digital Library.",
+            codeDetails: codeDoc
+          };
+        } else {
+          return { success: false, message: "This activation code has already been redeemed by another account." };
+        }
+      }
+
+      if (codeDoc.status === "REVOKED") {
+        return { success: false, message: "This activation code has been revoked." };
+      }
+
+      if (codeDoc.status === "EXPIRED") {
+        return { success: false, message: "This activation code has expired." };
+      }
+
+      // Available state: perform activation
+      const activatedAt = new Date().toISOString();
+
+      if (!isLocal) {
+        await updateDoc(doc(db, "activationCodes", cleanCode), {
+          status: "REDEEMED",
+          activatedBy: uid,
+          activatedAt
+        });
+      } else {
+        const local = JSON.parse(localStorage.getItem("storyvault_activation_codes") || "[]");
+        const updatedLocal = local.map((c: any) => 
+          c.activationCode === cleanCode 
+            ? { ...c, status: "REDEEMED", activatedBy: uid, activatedAt } 
+            : c
+        );
+        localStorage.setItem("storyvault_activation_codes", JSON.stringify(updatedLocal));
+      }
+
+      const targetBook = books.find(b => b.id === codeDoc.bookId);
+      const libDoc = {
+        bookId: codeDoc.bookId,
+        activatedAt,
+        readingProgress: 0,
+        lastOpened: activatedAt,
+        bookmarks: [],
+        notes: []
+      };
+
+      if (!isLocal) {
+        await setDoc(doc(db, "users", uid, "digitalLibrary", codeDoc.bookId), libDoc);
+      }
+
+      const localLibKey = `storyvault_users_${uid}_digital_library`;
+      const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+      if (!localLib.some((item: any) => item.bookId === codeDoc.bookId)) {
+        localLib.push(libDoc);
+        localStorage.setItem(localLibKey, JSON.stringify(localLib));
+      }
+
+      addToast({
+        title: "✓ Book Unlocked",
+        message: "Your purchase has been verified successfully!"
+      });
+
+      return {
+        success: true,
+        book: targetBook,
+        message: "Success",
+        codeDetails: {
+          activationCode: cleanCode,
+          activatedAt,
+          activatedBy: uid,
+          status: "REDEEMED"
+        }
+      };
+
+    } catch (err) {
+      console.error("Verification failed:", err);
+      return { success: false, message: "System error verifying the activation code." };
+    }
+  };
+
+  const fetchUserLibrary = async (): Promise<any[]> => {
+    const uid = currentUser?.uid || "guest";
+    const localLibKey = `storyvault_users_${uid}_digital_library`;
+    
+    try {
+      const { getDocs, collection } = await import("firebase/firestore");
+      const snap = await getDocs(collection(db, "users", uid, "digitalLibrary"));
+      const list: any[] = [];
+      snap.forEach(docSnap => {
+        list.push(docSnap.data());
+      });
+
+      const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+      const merged = [...list];
+      localLib.forEach((item: any) => {
+        if (!merged.some(m => m.bookId === item.bookId)) {
+          merged.push(item);
+        }
+      });
+      return merged;
+    } catch (err) {
+      console.warn("Firestore fetch failed, checking local storage:", err);
+      return JSON.parse(localStorage.getItem(localLibKey) || "[]");
+    }
+  };
+
+  const saveReadingProgress = async (bookId: string, chapterIndex: number, pageIndex: number) => {
+    const uid = currentUser?.uid || "guest";
+    const localLibKey = `storyvault_users_${uid}_digital_library`;
+    
+    try {
+      const { doc, updateDoc } = await import("firebase/firestore");
+      await updateDoc(doc(db, "users", uid, "digitalLibrary", bookId), {
+        lastOpened: new Date().toISOString(),
+        chapterIndex,
+        pageIndex
+      });
+    } catch (err) {
+      console.warn("Firestore progress update failed:", err);
+    }
+    
+    const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+    const updated = localLib.map((item: any) => {
+      if (item.bookId === bookId) {
+        return {
+          ...item,
+          lastOpened: new Date().toISOString(),
+          chapterIndex,
+          pageIndex
+        };
+      }
+      return item;
+    });
+    localStorage.setItem(localLibKey, JSON.stringify(updated));
+  };
+
+  const downloadBook = async (receiptId: string, bookId: string) => {
+    try {
+      // 1. Verify ownership from Firebase (check if the receipt matches receiptId)
+      let foundReceipt = null;
+      try {
+        const receiptSnap = await getDoc(doc(db, "receipts", receiptId));
+        if (receiptSnap.exists()) {
+          foundReceipt = receiptSnap.data();
+        }
+      } catch (e) {
+        console.warn("Firestore receipt query failed, trying local storage:", e);
+      }
+      
+      if (!foundReceipt) {
+        const local = JSON.parse(localStorage.getItem("storyvault_receipts") || "[]");
+        foundReceipt = local.find((r: any) => r.receiptId === receiptId || r.receiptNumber === receiptId || r.digitalAccessCode === receiptId);
+      }
+
+      if (!foundReceipt) {
+        throw new Error("Ownership verification failed: Receipt document not registered.");
+      }
+
+      // Check if this book is in the receipt books
+      const hasPurchased = foundReceipt.books.some((b: any) => b.bookId === bookId);
+      if (!hasPurchased) {
+        throw new Error("Ownership verification failed: Book not present on purchase receipt.");
+      }
+
+      // 2. Fetch storagePath and downloadURL from Firestore book document
+      const bookSnap = await getDoc(doc(db, "books", bookId));
+      if (!bookSnap.exists()) {
+        throw new Error("Metadata check failed: Book not found in catalog.");
+      }
+      
+      const bookData = bookSnap.data();
+      const storagePath = bookData.storagePath || `ebooks/${bookId}.pdf`;
+
+      // 3. Retrieve download URL from storage
+      const { ref, getDownloadURL } = await import("firebase/storage");
+      const { storage } = await import("../services/firebase");
+      
+      const storageRef = ref(storage, storagePath);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      // 4. Trigger browser file download automatically
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `${bookId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // 5. Save history log to firebase
+      const historyId = `DLH-${Math.floor(100000 + Math.random() * 900000)}`;
+      const downloadRecord = {
+        historyId,
+        receiptId,
+        bookId,
+        customerId: foundReceipt.customerId,
+        downloadedAt: new Date().toISOString(),
+        device: navigator.userAgent
+      };
+      
+      try {
+        await setDoc(doc(db, "downloadHistory", historyId), downloadRecord);
+      } catch (histErr) {
+        console.warn("Failed to write download history to Firestore, using local log:", histErr);
+        const localHistory = JSON.parse(localStorage.getItem("storyvault_download_history") || "[]");
+        localHistory.push(downloadRecord);
+        localStorage.setItem("storyvault_download_history", JSON.stringify(localHistory));
+      }
+
+      // 6. Show success toast notification
+      addToast({
+        title: "✓ Download Started",
+        message: "Your eBook is downloading. Enjoy reading!"
+      });
+
+    } catch (err) {
+      console.error("eBook download execution failed:", err);
+      // Show download failed toast error card
+      addToast({
+        title: "Download Failed",
+        message: "The requested eBook is unavailable. Please contact support."
+      });
+    }
+  };
+
+  return (
+    <BookstoreContext.Provider value={{
+      books,
+      cart,
+      wishlist,
+      purchasedBooks,
+      activeCoupon,
+      shippingDetails,
+      currentUser,
+      toasts,
+      receipts,
+      addToast,
+      removeToast,
+      addToCart,
+      removeFromCart,
+      clearCart,
+      toggleWishlist,
+      isInWishlist,
+      applyCoupon,
+      removeCoupon,
+      saveShipping,
+      checkout,
+      downloadBook,
+      verifyAndActivateCode,
+      fetchUserLibrary,
+      saveReadingProgress
+    }}>
+      {children}
+    </BookstoreContext.Provider>
+  );
+}
+
+export function useBookstore() {
+  const context = useContext(BookstoreContext);
+  if (!context) {
+    throw new Error("useBookstore must be used within a BookstoreProvider");
+  }
+  return context;
+}
