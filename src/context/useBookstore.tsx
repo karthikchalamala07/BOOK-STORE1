@@ -11,7 +11,7 @@ export interface ToastMessage {
   duration?: number;
   buttons?: { label: string; onClick: () => void }[];
 }
-import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { signInAnonymously, onAuthStateChanged, User as FirebaseUser, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { db, auth } from "../services/firebase";
 import { Book } from "../types";
 import { resolveBookCover } from "../services/coverService";
@@ -45,6 +45,9 @@ interface BookstoreContextType {
   activeCoupon: Coupon | null;
   shippingDetails: ShippingDetails | null;
   currentUser: FirebaseUser | null;
+  currentUserProfile: any;
+  currentAdmin: any;
+  isAuthLoading: boolean;
   toasts: ToastMessage[];
   receipts: any[];
   addToast: (toast: Omit<ToastMessage, "id">) => void;
@@ -62,6 +65,12 @@ interface BookstoreContextType {
   verifyAndActivateCode: (code: string) => Promise<{ success: boolean; book?: Book; message: string; codeDetails?: any }>;
   fetchUserLibrary: () => Promise<any[]>;
   saveReadingProgress: (bookId: string, chapterIndex: number, pageIndex: number) => Promise<void>;
+  customerSignup: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  customerLogin: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
+  customerLogout: () => Promise<void>;
+  adminLogin: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
+  adminLogout: () => Promise<void>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const BookstoreContext = createContext<BookstoreContextType | undefined>(undefined);
@@ -74,8 +83,21 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
   const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(null);
   const [shippingDetails, setShippingDetails] = useState<ShippingDetails | null>(null);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Auto-login stored admin session upon mounting
+  useEffect(() => {
+    const storedAdmin = localStorage.getItem("storyvault_admin") || sessionStorage.getItem("storyvault_admin");
+    if (storedAdmin) {
+      try {
+        setCurrentAdmin(JSON.parse(storedAdmin));
+      } catch (_) {}
+    }
+  }, []);
 
   const addToast = (toast: Omit<ToastMessage, "id">) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -101,10 +123,12 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (!userSnap.exists()) {
+          const defaultName = user.displayName || "Guest Reader";
+          const defaultEmail = user.email || "guest@storyvault.com";
           await setDoc(userRef, {
             uid: user.uid,
-            name: "Guest Reader",
-            email: user.email || "guest@storyvault.com",
+            name: defaultName,
+            email: defaultEmail,
             role: "customer",
             cart: [],
             wishlist: [],
@@ -117,10 +141,17 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
         const unsubUserDoc = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+            setCurrentUserProfile(data);
             setCart(data.cart || []);
             setWishlist(data.wishlist || []);
             setPurchasedBooks(data.purchasedBooks || []);
+          } else {
+            setCurrentUserProfile(null);
           }
+          setIsAuthLoading(false);
+        }, (err) => {
+          console.warn("Failed to listen user doc:", err);
+          setIsAuthLoading(false);
         });
 
         // Setup real-time listener for customer invoices
@@ -138,7 +169,10 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
           unsubReceipts();
         };
       } else {
-        // Sign in anonymously if no session active
+        setCurrentUser(null);
+        setCurrentUserProfile(null);
+        setIsAuthLoading(false);
+        // Auto sign in anonymously for guests if no user loaded
         signInAnonymously(auth).catch(err => {
           console.warn("User authentication failed: ", err);
         });
@@ -860,6 +894,177 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+
+  // --- CUSTOMER SIGNUP ---
+  const customerSignup = async (fullName: string, email: string, password: string) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        name: fullName,
+        email: email,
+        role: "customer",
+        cart: [],
+        wishlist: [],
+        purchasedBooks: [],
+        createdAt: new Date().toISOString()
+      });
+      
+      addToast({
+        title: "Account Created",
+        message: `Welcome to StoryVault, ${fullName}!`
+      });
+      return { success: true };
+    } catch (err: any) {
+      console.error(err);
+      return { success: false, error: err.message || "Failed to create account." };
+    }
+  };
+
+  // --- CUSTOMER LOGIN ---
+  const customerLogin = async (email: string, password: string, rememberMe: boolean) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      addToast({
+        title: "Login Successful",
+        message: "Welcome back to StoryVault!"
+      });
+      return { success: true };
+    } catch (err: any) {
+      console.error(err);
+      return { success: false, error: err.message || "Invalid credentials." };
+    }
+  };
+
+  // --- CUSTOMER LOGOUT ---
+  const customerLogout = async () => {
+    try {
+      await signOut(auth);
+      setCurrentUserProfile(null);
+      addToast({
+        title: "Logged Out",
+        message: "Preservation profile disconnected successfully."
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // --- GOOGLE SIGN IN ---
+  const loginWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || "StoryVault Reader",
+          email: user.email || "",
+          role: "customer",
+          cart: [],
+          wishlist: [],
+          purchasedBooks: [],
+          createdAt: new Date().toISOString()
+        });
+      }
+      
+      addToast({
+        title: "Google Sync Active",
+        message: "Signed in successfully with Google."
+      });
+      return { success: true };
+    } catch (err: any) {
+      console.error(err);
+      return { success: false, error: err.message || "Google Authentication failed." };
+    }
+  };
+
+  // --- ADMIN LOGIN (WITH SELF-HEALING DEFAULT SEEDING) ---
+  const adminLogin = async (email: string, password: string, rememberMe: boolean) => {
+    try {
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+      } catch (signInErr: any) {
+        const defaultAdmins: Record<string, { role: string; name: string; pass: string }> = {
+          "superadmin@storyvault.com": { role: "Super Admin", name: "Victoria Rex", pass: "SuperAdmin123!" },
+          "content@storyvault.com": { role: "Content Manager", name: "Clara Page", pass: "Content123!" },
+          "inventory@storyvault.com": { role: "Inventory Manager", name: "Marcus Stock", pass: "Inventory123!" },
+          "orders@storyvault.com": { role: "Order Manager", name: "David Parcel", pass: "Orders123!" },
+          "analytics@storyvault.com": { role: "Analytics Viewer", name: "Elena Chart", pass: "Analytics123!" }
+        };
+
+        if (defaultAdmins[email] && defaultAdmins[email].pass === password) {
+          userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          
+          await setDoc(doc(db, "admins", user.uid), {
+            uid: user.uid,
+            name: defaultAdmins[email].name,
+            email: email,
+            role: defaultAdmins[email].role,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString()
+          });
+        } else {
+          throw signInErr;
+        }
+      }
+
+      const user = userCredential.user;
+      const adminRef = doc(db, "admins", user.uid);
+      const adminSnap = await getDoc(adminRef);
+      
+      if (!adminSnap.exists()) {
+        await signOut(auth);
+        return { success: false, error: "Access Denied: Not registered as an Administrator." };
+      }
+      
+      const adminData = adminSnap.data();
+      await updateDoc(adminRef, { lastLogin: new Date().toISOString() });
+      adminData.lastLogin = new Date().toISOString();
+      
+      setCurrentAdmin(adminData);
+      
+      if (rememberMe) {
+        localStorage.setItem("storyvault_admin", JSON.stringify(adminData));
+      } else {
+        sessionStorage.setItem("storyvault_admin", JSON.stringify(adminData));
+      }
+      
+      addToast({
+        title: "CMS Authorized",
+        message: `Welcome, ${adminData.name} (${adminData.role})`
+      });
+      return { success: true };
+    } catch (err: any) {
+      console.error(err);
+      return { success: false, error: err.message || "Invalid administrator credentials." };
+    }
+  };
+
+  // --- ADMIN LOGOUT ---
+  const adminLogout = async () => {
+    try {
+      setCurrentAdmin(null);
+      localStorage.removeItem("storyvault_admin");
+      sessionStorage.removeItem("storyvault_admin");
+      await signOut(auth);
+      addToast({
+        title: "CMS Session Closed",
+        message: "Administrator session terminated."
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const contextValue = useMemo(() => ({
     books,
     cart,
@@ -868,6 +1073,9 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     activeCoupon,
     shippingDetails,
     currentUser,
+    currentUserProfile,
+    currentAdmin,
+    isAuthLoading,
     toasts,
     receipts,
     addToast,
@@ -884,7 +1092,13 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     downloadBook,
     verifyAndActivateCode,
     fetchUserLibrary,
-    saveReadingProgress
+    saveReadingProgress,
+    customerSignup,
+    customerLogin,
+    customerLogout,
+    adminLogin,
+    adminLogout,
+    loginWithGoogle
   }), [
     books,
     cart,
@@ -893,8 +1107,17 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     activeCoupon,
     shippingDetails,
     currentUser,
+    currentUserProfile,
+    currentAdmin,
+    isAuthLoading,
     toasts,
-    receipts
+    receipts,
+    customerSignup,
+    customerLogin,
+    customerLogout,
+    adminLogin,
+    adminLogout,
+    loginWithGoogle
   ]);
 
   return (

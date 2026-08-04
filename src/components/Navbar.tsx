@@ -1,6 +1,7 @@
 import React from "react";
 import { Search, Heart, ShoppingBag, History } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useBookstore } from "../context/useBookstore";
 
 interface NavbarProps {
   onSearchClick: () => void;
@@ -21,6 +22,7 @@ export default function Navbar({
 }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentUser, currentAdmin } = useBookstore();
 
   const isHome = location.pathname === "/";
   const isLibrary = location.pathname === "/library";
@@ -174,6 +176,30 @@ export default function Navbar({
           >
             <History size={18} />
           </button>
+
+          {/* Login / Profile Portal Actions */}
+          {currentUser && !currentUser.isAnonymous ? (
+            <button
+              onClick={() => navigate("/profile")}
+              className="font-mono text-[9px] uppercase tracking-widest text-[#F8F6F2] hover:text-gold border border-customBorder hover:border-gold py-1.5 px-3 rounded cursor-pointer transition-colors"
+            >
+              Profile
+            </button>
+          ) : currentAdmin ? (
+            <button
+              onClick={() => navigate("/admin")}
+              className="font-mono text-[9px] uppercase tracking-widest text-gold border border-gold/40 hover:border-gold py-1.5 px-3 rounded cursor-pointer transition-colors"
+            >
+              CMS Panel
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate("/login")}
+              className="font-mono text-[9px] uppercase tracking-widest text-gold bg-gold/10 border border-gold/30 hover:bg-gold hover:text-background py-1.5 px-3.5 rounded cursor-pointer transition-colors"
+            >
+              Sign In
+            </button>
+          )}
         </div>
       </div>
     </nav>

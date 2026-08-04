@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useBookstore } from "../context/useBookstore";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { 
@@ -6,7 +8,7 @@ import {
   DollarSign, ShoppingBag, Archive, TrendingUp, Sparkles, Clock, 
   Heart, Settings, Shield, User, Search, Plus, Trash2, Edit, Copy, 
   ArrowUpRight, ArrowDownRight, Eye, EyeOff, ChevronRight, ChevronDown, 
-  Check, X, Percent, Truck, Bell, Play, Briefcase, History, Sliders, 
+  Check, X, Percent, Truck, Bell, Play, Briefcase, History, Sliders, LogOut, 
   Download, Upload, Activity, Grid, List, ArrowUp, ArrowDown, Lock, 
   RefreshCw, SlidersHorizontal, Zap, HelpCircle, FileText, CheckCircle, AlertTriangle, Star
 } from "lucide-react";
@@ -165,7 +167,39 @@ interface NotificationMsg {
   createdAt: string;
 }
 
+
+const ROLE_PERMISSIONS: Record<string, string[]> = {
+  "Super Admin": [
+    "Dashboard", "Books", "Library CMS", "Homepage Builder", "Authors", "Categories", 
+    "Orders", "Customers", "Inventory", "Reviews", "Coupons", "Marketing", 
+    "Analytics", "Media Library", "AI Studio", "Automation Center", "Settings", "Security"
+  ],
+  "Administrator": [
+    "Dashboard", "Books", "Library CMS", "Homepage Builder", "Authors", "Categories", 
+    "Orders", "Customers", "Inventory", "Reviews", "Coupons", "Marketing", 
+    "Analytics", "Media Library", "AI Studio", "Automation Center", "Settings"
+  ],
+  "Content Manager": [
+    "Books", "Library CMS", "Homepage Builder", "Authors", "Categories", "Media Library", "AI Studio"
+  ],
+  "Inventory Manager": [
+    "Inventory"
+  ],
+  "Order Manager": [
+    "Orders", "Reviews", "Customers"
+  ],
+  "Marketing Manager": [
+    "Coupons", "Marketing", "Automation Center"
+  ],
+  "Analytics Viewer": [
+    "Dashboard", "Analytics"
+  ]
+};
+
 export default function AdminPortal() {
+  const navigate = useNavigate();
+  const { currentAdmin, adminLogout } = useBookstore();
+  
   // Navigation View State
   const [activeTab, setActiveTab] = useState<string>("Dashboard");
   const [isLoading, setIsLoading] = useState(true);
@@ -774,6 +808,26 @@ export default function AdminPortal() {
     { title: "Security", icon: Shield }
   ];
 
+  const allowedTabs = useMemo(() => {
+    return ROLE_PERMISSIONS[currentAdmin?.role || "Analytics Viewer"] || ["Dashboard"];
+  }, [currentAdmin]);
+
+  const filteredSidebarMenu = useMemo(() => {
+    return sidebarMenu.filter(m => allowedTabs.includes(m.title));
+  }, [allowedTabs]);
+
+  // If activeTab is unauthorized, redirect to the first allowed tab
+  useEffect(() => {
+    if (currentAdmin) {
+      const allowed = ROLE_PERMISSIONS[currentAdmin.role] || ["Dashboard"];
+      if (!allowed.includes(activeTab)) {
+        setActiveTab(allowed[0]);
+      }
+    }
+  }, [currentAdmin, activeTab]);
+
+  const isReadOnly = currentAdmin?.role === "Analytics Viewer";
+
   // Book Duplication Handler
   // Chart data memos for Dashboard Performance Optimization
   const monthlyRevenueData = useMemo(() => {
@@ -1201,6 +1255,10 @@ export default function AdminPortal() {
   };
 
   const handleDeleteCoupon = async (id: string) => {
+    if (isReadOnly) {
+      triggerToast("Access Denied: Analytics Viewer role is Read-Only.", "error");
+      return;
+    }
     if (confirm("Are you sure you want to delete this coupon?")) {
       try {
         await deleteDoc(doc(db, "coupons", id));
@@ -1509,30 +1567,26 @@ export default function AdminPortal() {
           </div>
         </div>
 
-        {/* Roles Quick Panel */}
-        <div className="mb-6 p-3 bg-[#111111] rounded border border-[#2D2D2D] flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="font-mono text-[8px] text-[#A5A5A5] uppercase">Active Role</span>
-            <span className="font-sans text-xs font-bold text-[#F8F6F2]">{currentRole}</span>
+        {/* Real Admin Profile Card */}
+        <div className="mb-6 p-3 bg-[#111111] rounded border border-[#2D2D2D] flex flex-col gap-2 font-sans">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col min-w-0">
+              <span className="font-mono text-[8px] text-[#A5A5A5] uppercase">Active User</span>
+              <span className="font-sans text-xs font-bold text-white truncate max-w-[110px]">
+                {currentAdmin?.name || "Administrator"}
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-gold/10 border border-gold/30 text-gold font-mono text-[8px] uppercase tracking-widest font-bold">
+              {currentAdmin?.role || "Super Admin"}
+            </span>
           </div>
-          <select 
-            value={currentRole} 
-            onChange={(e) => {
-              const role = e.target.value as any;
-              setCurrentRole(role);
-              triggerToast(`Switched workspace perspective to ${role}`);
-            }}
-            className="bg-[#1A1A1A] border border-[#2D2D2D] text-xs text-[#C9A227] rounded p-1"
-          >
-            <option>Super Admin</option>
-            <option>Editor</option>
-            <option>Content Manager</option>
-            <option>Customer Support</option>
-          </select>
+          <p className="font-mono text-[7px] text-[#A5A5A5] uppercase truncate">
+            Last Login: {currentAdmin?.lastLogin ? new Date(currentAdmin.lastLogin).toLocaleTimeString() : "Just Now"}
+          </p>
         </div>
 
         <nav className="flex-1 space-y-1.5 overflow-y-auto max-h-[50vh] md:max-h-[60vh] pr-2">
-          {sidebarMenu.map(menu => {
+          {filteredSidebarMenu.map(menu => {
             const Icon = menu.icon;
             const isActive = activeTab === menu.title;
             return (

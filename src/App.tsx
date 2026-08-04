@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import FeaturedBooks from "./components/FeaturedBooks";
@@ -25,6 +25,10 @@ const PurchasedReader = lazy(() => import("./components/PurchasedReader"));
 const BookDetails = lazy(() => import("./components/BookDetails"));
 const SearchPanel = lazy(() => import("./components/SearchPanel"));
 const AdminPortal = lazy(() => import("./components/AdminPortal"));
+
+const CustomerAuth = lazy(() => import("./components/CustomerAuth"));
+const CustomerProfile = lazy(() => import("./components/CustomerProfile"));
+const AdminLogin = lazy(() => import("./components/AdminLogin"));
 
 // Framer Motion page transition parameters (300ms fade-out, 400ms fade-in)
 const pageTransitionVariants = {
@@ -63,7 +67,7 @@ function AppContent() {
   const { history, updateReadingProgress, clearHistory } = useReadingHistory();
 
   // Load live books, cart, and wishlist from BookstoreProvider
-  const { books, cart, wishlist, toasts, removeToast, fetchUserLibrary, currentUser } = useBookstore();
+  const { books, cart, wishlist, toasts, removeToast, fetchUserLibrary, currentUser, currentAdmin, currentUserProfile, isAuthLoading } = useBookstore();
 
   const [unlockedBookIds, setUnlockedBookIds] = useState<string[]>([]);
   
@@ -153,6 +157,24 @@ function AppContent() {
   };
 
   const cartItemsCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0C0C0C] flex flex-col items-center justify-center space-y-6">
+        <div className="relative w-16 h-16 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border border-gold/20 border-t-gold animate-spin" />
+        </div>
+        <div className="text-center">
+          <span className="font-mono text-[9px] text-gold uppercase tracking-[0.25em] block">
+            STORYVAULT ARCHIVE
+          </span>
+          <p className="font-serif text-xs italic text-secondaryText mt-2 animate-pulse">
+            Authenticating Preservation Node...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative bg-background text-primaryText min-h-screen selection:bg-gold selection:text-background overflow-hidden">
@@ -382,24 +404,130 @@ function AppContent() {
             }
           />
 
-          {/* BOOKOS ADMIN CMS PORTAL VIEW */}
+          {/* BOOKOS ADMIN CMS PORTAL VIEW (PROTECTED) */}
           <Route 
             path="/admin" 
             element={
-              <motion.div
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-              >
-                <Suspense fallback={
-                  <div className="min-h-screen flex items-center justify-center font-mono text-gold text-xs uppercase tracking-widest animate-pulse bg-[#111111]">
-                    Booting BookOS Admin Portal...
-                  </div>
-                }>
-                  <AdminPortal />
-                </Suspense>
-              </motion.div>
+              currentAdmin ? (
+                <motion.div
+                  variants={pageTransitionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  <Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center font-mono text-gold text-xs uppercase tracking-widest animate-pulse bg-[#111111]">
+                      Booting BookOS Admin Portal...
+                    </div>
+                  }>
+                    <AdminPortal />
+                  </Suspense>
+                </motion.div>
+              ) : (
+                <Navigate to="/admin/login" replace />
+              )
+            }
+          />
+
+          {/* ADMIN LOGIN VIEW */}
+          <Route 
+            path="/admin/login" 
+            element={
+              currentAdmin ? (
+                <Navigate to="/admin" replace />
+              ) : (
+                <motion.div
+                  variants={pageTransitionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  <Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center font-mono text-gold text-xs uppercase tracking-widest bg-background">
+                      Decrypting Administrator Access...
+                    </div>
+                  }>
+                    <AdminLogin />
+                  </Suspense>
+                </motion.div>
+              )
+            }
+          />
+
+          {/* CUSTOMER LOGIN VIEW */}
+          <Route 
+            path="/login" 
+            element={
+              currentUser && !currentUser.isAnonymous ? (
+                <Navigate to="/profile" replace />
+              ) : currentAdmin ? (
+                <Navigate to="/admin" replace />
+              ) : (
+                <motion.div
+                  variants={pageTransitionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  <Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center font-mono text-gold text-xs uppercase tracking-widest bg-background">
+                      Decrypting Codex Vault...
+                    </div>
+                  }>
+                    <CustomerAuth initialMode="login" />
+                  </Suspense>
+                </motion.div>
+              )
+            }
+          />
+
+          {/* CUSTOMER REGISTER VIEW */}
+          <Route 
+            path="/signup" 
+            element={
+              currentUser && !currentUser.isAnonymous ? (
+                <Navigate to="/profile" replace />
+              ) : (
+                <motion.div
+                  variants={pageTransitionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  <Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center font-mono text-gold text-xs uppercase tracking-widest bg-background">
+                      Decrypting Codex Vault...
+                    </div>
+                  }>
+                    <CustomerAuth initialMode="signup" />
+                  </Suspense>
+                </motion.div>
+              )
+            }
+          />
+
+          {/* CUSTOMER PROFILE VIEW (PROTECTED) */}
+          <Route 
+            path="/profile" 
+            element={
+              currentUser && !currentUser.isAnonymous ? (
+                <motion.div
+                  variants={pageTransitionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                >
+                  <Suspense fallback={
+                    <div className="min-h-screen flex items-center justify-center font-mono text-gold text-xs uppercase tracking-widest bg-background animate-pulse">
+                      Booting Preservation Profile...
+                    </div>
+                  }>
+                    <CustomerProfile />
+                  </Suspense>
+                </motion.div>
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
           {/* QR RECEIPT VERIFICATION VIEW */}
