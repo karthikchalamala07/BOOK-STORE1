@@ -100,20 +100,26 @@ interface Customer {
 }
 
 interface Coupon {
+  id?: string;
   code: string;
-  type: "Percentage" | "Fixed" | "BOGO" | "Free Shipping";
-  value: number;
-  status: "Active" | "Scheduled" | "Expired";
-  usageLimit: number;
+  type?: "Percentage" | "Fixed" | "BOGO" | "Free Shipping";
+  value?: number;
+  status?: "Active" | "Scheduled" | "Expired";
+  usageLimit?: number;
   usedCount: number;
+  discount?: number;
+  maxUses?: number;
+  expiryDate?: string;
+  isActive?: boolean;
 }
 
 interface AutomationRule {
   id: string;
   trigger: string;
-  condition: string;
+  condition?: string;
   action: string;
   isActive: boolean;
+  delayMinutes?: number;
 }
 
 interface MediaFile {
@@ -123,6 +129,11 @@ interface MediaFile {
   size: string;
   uploadedAt: string;
   tags: string[];
+  filename?: string;
+  fileType?: string;
+  fileSize?: string;
+  url?: string;
+  uploadDate?: string;
 }
 
 interface AuditLog {
@@ -131,6 +142,8 @@ interface AuditLog {
   action: string;
   target: string;
   timestamp: string;
+  ipAddress?: string;
+  device?: string;
 }
 
 interface Review {
@@ -240,6 +253,31 @@ export default function AdminPortal() {
   const [sortOption, setSortOption] = useState("Newest");
   const [deleteConfirmBook, setDeleteConfirmBook] = useState<CMSBook | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Additional CMS Tab States
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [couponModalMode, setCouponModalMode] = useState<"create" | "edit">("create");
+
+  const [selectedAutomation, setSelectedAutomation] = useState<AutomationRule | null>(null);
+  const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false);
+  const [automationModalMode, setAutomationModalMode] = useState<"create" | "edit">("create");
+
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [newMediaName, setNewMediaName] = useState("");
+  const [newMediaType, setNewMediaType] = useState("image/png");
+  const [newMediaUrl, setNewMediaUrl] = useState("");
+
+  const [storeSettings, setStoreSettings] = useState({
+    storeName: "StoryVault Premium Classics",
+    supportEmail: "contact@storyvault.app",
+    supportPhone: "+91 98765 43210",
+    currency: "INR",
+    taxRate: 5,
+    enableStripe: true,
+    enableUPI: true,
+    enablePayPal: false
+  });
 
   // Library, Homepage, Authors & Categories CMS States
   const [authorsList, setAuthorsList] = useState<Author[]>([]);
@@ -372,6 +410,45 @@ export default function AdminPortal() {
     }, (err) => {
       console.warn("Collections sync offline");
     });
+
+    // Coupons seed check
+    const checkCouponsSeed = async () => {
+      const q = await getDocs(collection(db, "coupons"));
+      if (q.empty) {
+        await setDoc(doc(db, "coupons", "classic20"), { id: "classic20", code: "CLASSIC20", discount: 20, maxUses: 100, usedCount: 15, isActive: true, expiryDate: "2026-12-31" });
+        await setDoc(doc(db, "coupons", "gothic10"), { id: "gothic10", code: "GOTHIC10", discount: 10, maxUses: 200, usedCount: 54, isActive: true, expiryDate: "2026-12-31" });
+      }
+    };
+    checkCouponsSeed();
+
+    // Automations seed check
+    const checkAutomationsSeed = async () => {
+      const q = await getDocs(collection(db, "automations"));
+      if (q.empty) {
+        await setDoc(doc(db, "automations", "rule-abandoned"), { id: "rule-abandoned", trigger: "Abandoned Cart", action: "Send Abandoned Cart Email", delayMinutes: 30, isActive: true });
+        await setDoc(doc(db, "automations", "rule-welcome"), { id: "rule-welcome", trigger: "New Customer Signup", action: "Send Welcome Coupon Email", delayMinutes: 5, isActive: true });
+      }
+    };
+    checkAutomationsSeed();
+
+    // Media Files seed check
+    const checkMediaSeed = async () => {
+      const q = await getDocs(collection(db, "mediaFiles"));
+      if (q.empty) {
+        await setDoc(doc(db, "mediaFiles", "cover-dracula"), { id: "cover-dracula", filename: "dracula-cover.webp", fileType: "image/webp", fileSize: "124 KB", url: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e", uploadDate: "2026-08-01" });
+        await setDoc(doc(db, "mediaFiles", "cover-frankenstein"), { id: "cover-frankenstein", filename: "frankenstein-cover.webp", fileType: "image/webp", fileSize: "98 KB", url: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73", uploadDate: "2026-08-02" });
+      }
+    };
+    checkMediaSeed();
+
+    // Audit Logs seed check
+    const checkAuditSeed = async () => {
+      const q = await getDocs(collection(db, "auditLogs"));
+      if (q.empty) {
+        await setDoc(doc(db, "auditLogs", "log-init"), { id: "log-init", action: "Admin System Booted", user: "karthik@storyvault.app", ipAddress: "192.168.1.1", device: "Chrome / Windows 11", timestamp: new Date().toISOString() });
+      }
+    };
+    checkAuditSeed();
 
     const loadLocalFallbacks = () => {
       // Books
@@ -1023,6 +1100,154 @@ export default function AdminPortal() {
     const nextLayout = homepageLayout.filter((_, idx) => idx !== index);
     setHomepageLayout(nextLayout);
     triggerToast("Section removed.");
+  };
+
+  // Coupons CRUD handlers
+  const handleOpenCouponCreate = () => {
+    setSelectedCoupon({
+      id: `coupon-${Date.now()}`,
+      code: "",
+      discount: 10,
+      maxUses: 100,
+      usedCount: 0,
+      isActive: true,
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    });
+    setCouponModalMode("create");
+    setIsCouponModalOpen(true);
+  };
+
+  const handleSaveCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCoupon) return;
+    try {
+      await setDoc(doc(db, "coupons", selectedCoupon.id!), selectedCoupon);
+      triggerToast(`Coupon "${selectedCoupon.code}" saved successfully.`);
+      setIsCouponModalOpen(false);
+      // Log audit
+      await addDoc(collection(db, "auditLogs"), {
+        action: `Coupon Saved: ${selectedCoupon.code}`,
+        user: "karthik@storyvault.app",
+        ipAddress: "192.168.1.1",
+        device: "Chrome / Windows 11",
+        timestamp: new Date().toISOString()
+      });
+    } catch (err) {
+      triggerToast("Failed to save coupon.", "error");
+    }
+  };
+
+  const handleDeleteCoupon = async (id: string) => {
+    if (confirm("Are you sure you want to delete this coupon?")) {
+      try {
+        await deleteDoc(doc(db, "coupons", id));
+        triggerToast("Coupon deleted.");
+      } catch (err) {
+        triggerToast("Failed to delete coupon.", "error");
+      }
+    }
+  };
+
+  // Automations CRUD handlers
+  const handleOpenAutomationCreate = () => {
+    setSelectedAutomation({
+      id: `rule-${Date.now()}`,
+      trigger: "Abandoned Cart",
+      action: "Send Reminder Email",
+      delayMinutes: 30,
+      isActive: true
+    });
+    setAutomationModalMode("create");
+    setIsAutomationModalOpen(true);
+  };
+
+  const handleSaveAutomation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAutomation) return;
+    try {
+      await setDoc(doc(db, "automations", selectedAutomation.id!), selectedAutomation);
+      triggerToast(`Rule trigger saved successfully.`);
+      setIsAutomationModalOpen(false);
+    } catch (err) {
+      triggerToast("Failed to save rule.", "error");
+    }
+  };
+
+  const handleDeleteAutomation = async (id: string) => {
+    if (confirm("Are you sure you want to delete this rule?")) {
+      try {
+        await deleteDoc(doc(db, "automations", id));
+        triggerToast("Rule deleted.");
+      } catch (err) {
+        triggerToast("Failed to delete rule.", "error");
+      }
+    }
+  };
+
+  // Media Library handlers
+  const handleAddMediaFile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMediaName) return;
+    try {
+      const newFile = {
+        id: `media-${Date.now()}`,
+        filename: newMediaName,
+        fileType: newMediaType,
+        fileSize: "145 KB",
+        url: newMediaUrl || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400",
+        uploadDate: new Date().toISOString().split('T')[0]
+      };
+      await setDoc(doc(db, "mediaFiles", newFile.id), newFile);
+      triggerToast(`Media file "${newMediaName}" uploaded.`);
+      setIsMediaModalOpen(false);
+      setNewMediaName("");
+      setNewMediaUrl("");
+    } catch (err) {
+      triggerToast("Failed to upload media.", "error");
+    }
+  };
+
+  const handleDeleteMedia = async (id: string) => {
+    if (confirm("Are you sure you want to delete this media file?")) {
+      try {
+        await deleteDoc(doc(db, "mediaFiles", id));
+        triggerToast("Media file deleted.");
+      } catch (err) {
+        triggerToast("Failed to delete file.", "error");
+      }
+    }
+  };
+
+  // AI Prompt simulation stream
+  const handleGenerateAISuggestion = () => {
+    if (!aiPrompt) return;
+    setAiLoading(true);
+    setAiGeneratedText("");
+    
+    // Simulating custom streaming copywriting responses
+    const responses: Record<string, string> = {
+      dracula: "A dark masterpiece tracing Dracula\'s gothic voyage from the Transylvanian shadows to modern London. Expect sharp, blood-chilling descriptive detail, crumbling ancient castles, and an atmosphere of creeping romantic dread.",
+      gothic: "Uncover a dark romance that transcends the grave itself. Through stormy moors and candle-lit corridors, a chilling secrets unravel in this timeless gothic narrative.",
+      philosophy: "A deep academic synthesis exploring historical theories of mind, wisdom, and the human search for objective knowledge. Critical reading for scholars and modern thinkers.",
+      default: "An elegant classic curated from the public domain archives. With restored text quality, bespoke illustrations, and deep reader guides, this volume is a premium addition to any collection."
+    };
+
+    const promptLower = aiPrompt.toLowerCase();
+    let text = responses.default;
+    if (promptLower.includes("dracula")) text = responses.dracula;
+    else if (promptLower.includes("gothic")) text = responses.gothic;
+    else if (promptLower.includes("philosophy")) text = responses.philosophy;
+
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < text.length) {
+        setAiGeneratedText(prev => prev + text.charAt(index));
+        index++;
+      } else {
+        clearInterval(interval);
+        setAiLoading(false);
+      }
+    }, 20);
   };
 
   // Book CRUD Handlers
@@ -2322,19 +2547,668 @@ export default function AdminPortal() {
               </div>
             )}
 
-                        {/* General Fallback for other tabs */}
-            {!["Dashboard", "Orders", "Reviews", "Customers", "Inventory", "Books", "Library CMS", "Homepage Builder", "Authors", "Categories"].includes(activeTab) && (
-              <div className="bg-[#1A1A1A] p-10 rounded border border-[#2D2D2D] text-center space-y-4">
-                <Sparkles size={40} className="text-[#C9A227] mx-auto opacity-40 animate-pulse" />
-                <h3 className="font-serif text-xl text-white">{activeTab} Live Portal</h3>
-                <p className="text-xs font-mono text-[#A5A5A5] max-w-lg mx-auto">
-                  Connected to shared Firebase cluster. Real-time updates active.
-                </p>
-                {activeTab === "Analytics" && (
-                  <div className="p-6 bg-[#111111] rounded border border-dashed border-[#2D2D2D] max-w-sm mx-auto text-xs font-mono text-[#A5A5A5]">
-                    No analytics available.
+                        {/* TAB: COUPONS */}
+            {activeTab === "Coupons" && (
+              <div className="space-y-6">
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Promotional Coupons</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Manage active customer checkout discounts and promo code rules.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenCouponCreate}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> Create Coupon
+                  </button>
+                </div>
+
+                {coupons.length === 0 ? (
+                  <div className="bg-[#1A1A1A] p-12 rounded border border-dashed border-[#2D2D2D] text-center space-y-3">
+                    <Percent size={40} className="text-[#A5A5A5]/30 mx-auto" />
+                    <h4 className="font-serif text-white">No promotional coupons.</h4>
+                    <p className="text-xs text-[#A5A5A5]">Create your first discount coupon to begin promotions.</p>
+                  </div>
+                ) : (
+                  <div className="bg-[#1A1A1A] rounded border border-[#2D2D2D] overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                          <th className="p-4">Coupon Code</th>
+                          <th className="p-4">Discount %</th>
+                          <th className="p-4">Max Uses</th>
+                          <th className="p-4">Used Count</th>
+                          <th className="p-4">Expiry Date</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {coupons.map(c => (
+                          <tr key={c.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30">
+                            <td className="p-4 font-mono font-bold text-[#C9A227]">{c.code}</td>
+                            <td className="p-4 font-mono text-white">{c.discount}% OFF</td>
+                            <td className="p-4 font-mono text-[#A5A5A5]">{c.maxUses}</td>
+                            <td className="p-4 font-mono text-[#A5A5A5]">{c.usedCount || 0} times</td>
+                            <td className="p-4 font-mono text-[#A5A5A5]">{c.expiryDate}</td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleDeleteCoupon(c.id!)}
+                                className="p-1.5 text-red-400 hover:bg-[#111111] rounded cursor-pointer"
+                                title="Delete Coupon"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* TAB: MARKETING */}
+            {activeTab === "Marketing" && (
+              <div className="space-y-6">
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Marketing Campaigns</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Draft newsletter distributions, subscriber segments, and email campaign analytics.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => triggerToast("New promotion campaign drafted.")}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> New Campaign
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-2">
+                    <span className="font-mono text-[9px] text-[#A5A5A5] uppercase">Newsletter Subscribers</span>
+                    <h4 className="text-2xl font-serif text-white">{customers.length * 3 + 12} Readers</h4>
+                    <p className="text-[10px] text-[#A5A5A5]">Opted-in catalog announcement emails.</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-2">
+                    <span className="font-mono text-[9px] text-[#A5A5A5] uppercase">Average Click Rate</span>
+                    <h4 className="text-2xl font-serif text-[#C9A227]">14.8%</h4>
+                    <p className="text-[10px] text-[#A5A5A5]">Exceeds industry standard of 11.2%</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-2">
+                    <span className="font-mono text-[9px] text-[#A5A5A5] uppercase">Opt-out Rate</span>
+                    <h4 className="text-2xl font-serif text-white">0.4%</h4>
+                    <p className="text-[10px] text-[#A5A5A5]">Highly engaged classics readers audience.</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                  <h4 className="font-serif text-sm text-white">Campaign Logs</h4>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-[#111111] rounded border border-[#2D2D2D] flex justify-between items-center">
+                      <div>
+                        <h5 className="text-xs font-bold text-white">Midsummer Gothic Solstice Promo</h5>
+                        <p className="text-[10px] font-mono text-[#A5A5A5] mt-0.5">Sent to 45 readers • Click rate: 18.2%</p>
+                      </div>
+                      <span className="bg-green-950/80 text-green-400 font-mono text-[9px] px-2 py-0.5 rounded border border-green-500/30">SENT</span>
+                    </div>
+                    <div className="p-4 bg-[#111111] rounded border border-[#2D2D2D] flex justify-between items-center">
+                      <div>
+                        <h5 className="text-xs font-bold text-white">Jane Austen Commemorative Newsletter</h5>
+                        <p className="text-[10px] font-mono text-[#A5A5A5] mt-0.5">Drafted by AI Studio • Target: 105 subscribers</p>
+                      </div>
+                      <span className="bg-gray-950 text-[#A5A5A5] font-mono text-[9px] px-2 py-0.5 rounded border border-gray-800">DRAFT</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: ANALYTICS */}
+            {activeTab === "Analytics" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Business Intelligence</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Deep-dive catalog sales, digital preview conversion metrics, and revenue splits.
+                    </p>
+                  </div>
+                  <select className="bg-[#111111] border border-[#2D2D2D] text-xs text-white p-2 rounded">
+                    <option>Last 7 Days</option>
+                    <option>Last 30 Days</option>
+                    <option>Lifetime Catalog Stats</option>
+                  </select>
+                </div>
+
+                {/* Simulated Revenue trend bar chart */}
+                <div className="bg-[#1A1A1A] p-6 rounded border border-[#2D2D2D] space-y-4">
+                  <h4 className="font-serif text-sm text-white">Daily Catalog Sales Trend</h4>
+                  <div className="h-40 flex items-end justify-between gap-2 pt-6 border-b border-[#2D2D2D] font-mono text-[10px]">
+                    {[
+                      { day: "Mon", val: 30 },
+                      { day: "Tue", val: 55 },
+                      { day: "Wed", val: 40 },
+                      { day: "Thu", val: 80 },
+                      { day: "Fri", val: 95 },
+                      { day: "Sat", val: 120 },
+                      { day: "Sun", val: 150 }
+                    ].map(item => (
+                      <div key={item.day} className="flex-1 flex flex-col items-center gap-2">
+                        <div 
+                          style={{ height: `${item.val}px` }} 
+                          className="w-full bg-[#C9A227] hover:bg-[#B89220] rounded-t transition-all duration-300 relative group"
+                        >
+                          <span className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#111111] px-1 py-0.5 rounded border border-[#2D2D2D] text-[8px] opacity-0 group-hover:opacity-100 transition-opacity">
+                            ₹{item.val * 100}
+                          </span>
+                        </div>
+                        <span className="text-[#A5A5A5] text-[9px]">{item.day}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Conversion Funnel */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-3">
+                    <h4 className="font-serif text-sm text-white">Reader Conversion Funnel</h4>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-[#A5A5A5]">1. Store Visit</span>
+                          <span className="text-white">100% (1,240 Visitors)</span>
+                        </div>
+                        <div className="h-2 bg-[#2D2D2D] rounded-full overflow-hidden">
+                          <div className="h-full bg-white w-full" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-[#A5A5A5]">2. Preview 3D Book View</span>
+                          <span className="text-white">65% (806 Reads)</span>
+                        </div>
+                        <div className="h-2 bg-[#2D2D2D] rounded-full overflow-hidden">
+                          <div className="h-full bg-[#C9A227] w-[65%]" />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] font-mono">
+                          <span className="text-[#A5A5A5]">3. Purchase Completed</span>
+                          <span className="text-white">12.5% (155 Orders)</span>
+                        </div>
+                        <div className="h-2 bg-[#2D2D2D] rounded-full overflow-hidden">
+                          <div className="h-full bg-green-500 w-[12.5%]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">Format Revenue Split</h4>
+                    <div className="flex items-center gap-6">
+                      <div className="w-24 h-24 rounded-full border-8 border-r-[#C9A227] border-l-white border-t-white border-b-white rotate-45 flex items-center justify-center shrink-0">
+                        <span className="font-mono text-xs text-white">₹{analyticsSummary.revenue || 0}</span>
+                      </div>
+                      <div className="space-y-2 text-xs font-mono">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 bg-white rounded-full" />
+                          <span className="text-white">Physical Hardcovers: 75%</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 bg-[#C9A227] rounded-full" />
+                          <span className="text-white">Digital eBooks: 25%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB: MEDIA LIBRARY */}
+            {activeTab === "Media Library" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Media Asset Repository</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Upload and catalog book covers, backgrounds, and illustrated assets.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsMediaModalOpen(true)}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> Upload Asset
+                  </button>
+                </div>
+
+                {mediaFiles.length === 0 ? (
+                  <div className="bg-[#1A1A1A] p-12 rounded border border-dashed border-[#2D2D2D] text-center space-y-3">
+                    <FolderOpen size={40} className="text-[#A5A5A5]/30 mx-auto" />
+                    <h4 className="font-serif text-white">Media library is empty.</h4>
+                    <p className="text-xs text-[#A5A5A5]">Upload book covers, promotional banners, or backgrounds to begin.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {mediaFiles.map(m => (
+                      <div key={m.id} className="bg-[#1A1A1A] rounded border border-[#2D2D2D] overflow-hidden flex flex-col group relative">
+                        {(m.fileType || "").startsWith("image/") ? (
+                          <img
+                            src={m.url || "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?q=80&w=400"}
+                            alt={m.filename}
+                            className="h-28 w-full object-cover border-b border-[#2D2D2D]"
+                          />
+                        ) : (
+                          <div className="h-28 bg-[#111111] flex items-center justify-center border-b border-[#2D2D2D]">
+                            <BookOpen size={30} className="text-[#A5A5A5]" />
+                          </div>
+                        )}
+                        <div className="p-2 space-y-1">
+                          <p className="text-[10px] font-bold text-white truncate">{m.filename}</p>
+                          <p className="text-[8px] font-mono text-[#A5A5A5]">{m.fileSize} • {(m.fileType || "").split("/")[1].toUpperCase()}</p>
+                        </div>
+                        
+                        {/* Hover Overlay Delete */}
+                        <button
+                          onClick={() => handleDeleteMedia(m.id)}
+                          className="absolute top-2 right-2 p-1.5 bg-red-600/90 text-white rounded hover:bg-red-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Delete File"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: AI STUDIO */}
+            {activeTab === "AI Studio" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D]">
+                  <h3 className="font-serif text-lg text-white">AI Studio & Content Writer</h3>
+                  <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                    Leverage neural linguistics to generate gothic blurb designs, sales copy, or SEO descriptions.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
+                  {/* Generation Pane */}
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">Copywriting Generation Parameters</h4>
+                    
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Target Prompt</label>
+                      <textarea
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        placeholder="e.g. Write a dark, gothic description for Dracula..."
+                        className="bg-[#111111] border border-[#2D2D2D] p-3 h-24 text-xs text-white rounded focus:border-[#C9A227] resize-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Writing Tone</label>
+                        <select className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded">
+                          <option>Mysterious & Gothic</option>
+                          <option>Academic & Scholarly</option>
+                          <option>Captivating & Bold</option>
+                          <option>Sleek & Professional</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Template Format</label>
+                        <select className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded">
+                          <option>Book Blurb / Description</option>
+                          <option>SEO Meta Description</option>
+                          <option>Promotional News Draft</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleGenerateAISuggestion}
+                      disabled={aiLoading || !aiPrompt}
+                      className="w-full bg-[#C9A227] hover:bg-[#B89220] disabled:bg-[#2D2D2D] disabled:text-[#A5A5A5] text-black font-mono font-bold text-xs py-2.5 rounded flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      {aiLoading ? (
+                        <>Streaming neural tokens...</>
+                      ) : (
+                        <>
+                          <Sparkles size={14} /> Generate Content
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Output Pane */}
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex flex-col justify-between min-h-[300px]">
+                    <div className="space-y-4">
+                      <h4 className="font-serif text-sm text-white">Generated Output</h4>
+                      <div className="bg-[#111111] border border-[#2D2D2D] p-4 rounded min-h-[160px] text-xs leading-relaxed text-[#F8F6F2] font-mono whitespace-pre-wrap">
+                        {aiGeneratedText || (
+                          <span className="text-[#A5A5A5] italic">Set parameters and trigger generation on the left.</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {aiGeneratedText && (
+                      <div className="flex gap-2 pt-4">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(aiGeneratedText);
+                            triggerToast("Copy text to clipboard successfully.", "success");
+                          }}
+                          className="flex-1 bg-[#111111] border border-[#2D2D2D] hover:border-[#C9A227]/30 text-white font-mono text-xs py-2 rounded flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          Copy to Clipboard
+                        </button>
+                        <button
+                          onClick={() => {
+                            triggerToast("Applying copy to current selected catalog book.", "success");
+                          }}
+                          className="flex-1 bg-green-900/40 hover:bg-green-900/60 border border-green-500/30 text-green-400 font-mono text-xs py-2 rounded flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                          Apply to Catalog
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* TAB: AUTOMATION CENTER */}
+            {activeTab === "Automation Center" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Automation Center</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Orchestrate system webhooks, transactional triggers, and order emails.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenAutomationCreate}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add Trigger Rule
+                  </button>
+                </div>
+
+                {/* Automation triggers list */}
+                {automations.length === 0 ? (
+                  <div className="bg-[#1A1A1A] p-12 rounded border border-dashed border-[#2D2D2D] text-center space-y-2">
+                    <span className="font-mono text-xs text-[#A5A5A5] uppercase italic">No active system automation rules</span>
+                  </div>
+                ) : (
+                  <div className="bg-[#1A1A1A] rounded border border-[#2D2D2D] overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                          <th className="p-4">Trigger Event</th>
+                          <th className="p-4">Action Pipeline</th>
+                          <th className="p-4">Delay Constraint</th>
+                          <th className="p-4">Status</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {automations.map(auto => (
+                          <tr key={auto.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30">
+                            <td className="p-4 font-semibold text-white">{auto.trigger}</td>
+                            <td className="p-4 font-mono text-[#A5A5A5]">{auto.action}</td>
+                            <td className="p-4 font-mono text-[#A5A5A5]">{auto.delayMinutes} mins delay</td>
+                            <td className="p-4">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                auto.isActive ? "bg-green-950/80 border border-green-500/30 text-green-400" : "bg-red-950/80 border border-red-500/30 text-red-400"
+                              }`}>
+                                {auto.isActive ? "ACTIVE" : "PAUSED"}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <button
+                                onClick={() => handleDeleteAutomation(auto.id)}
+                                className="p-1.5 text-red-400 hover:bg-[#111111] rounded cursor-pointer"
+                                title="Delete Rule"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: SETTINGS */}
+            {activeTab === "Settings" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D]">
+                  <h3 className="font-serif text-lg text-white">System Settings</h3>
+                  <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                    Manage default checkout currency, support profiles, and payment gateway rules.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  {/* General Config */}
+                  <div className="md:col-span-2 bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">General Store Profile</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Store Display Name</label>
+                        <input
+                          type="text"
+                          value={storeSettings.storeName}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, storeName: e.target.value })}
+                          className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Support Contact Email</label>
+                        <input
+                          type="text"
+                          value={storeSettings.supportEmail}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, supportEmail: e.target.value })}
+                          className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 border-t border-[#2D2D2D]/60 pt-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Store Base Currency</label>
+                        <select
+                          value={storeSettings.currency}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, currency: e.target.value })}
+                          className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                        >
+                          <option value="INR">INR (₹) Indian Rupee</option>
+                          <option value="USD">USD ($) US Dollar</option>
+                          <option value="EUR">EUR (€) Euro</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Estimated Tax Rate (%)</label>
+                        <input
+                          type="number"
+                          value={storeSettings.taxRate}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, taxRate: parseInt(e.target.value) })}
+                          className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => triggerToast("System settings saved successfully.", "success")}
+                      className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                    >
+                      Save Configuration
+                    </button>
+                  </div>
+
+                  {/* Payment Toggles */}
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">Payment Integrations</h4>
+                    <div className="space-y-3 pt-2">
+                      <div className="flex justify-between items-center p-3 bg-[#111111] rounded border border-[#2D2D2D]">
+                        <span className="text-xs text-white">Stripe Payment Gateway</span>
+                        <input
+                          type="checkbox"
+                          checked={storeSettings.enableStripe}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, enableStripe: e.target.checked })}
+                          className="bg-[#1A1A1A] border-[#2D2D2D] text-[#C9A227] rounded"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-[#111111] rounded border border-[#2D2D2D]">
+                        <span className="text-xs text-white">UPI Payment Channels</span>
+                        <input
+                          type="checkbox"
+                          checked={storeSettings.enableUPI}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, enableUPI: e.target.checked })}
+                          className="bg-[#1A1A1A] border-[#2D2D2D] text-[#C9A227] rounded"
+                        />
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-[#111111] rounded border border-[#2D2D2D]">
+                        <span className="text-xs text-white">PayPal Checkout Panel</span>
+                        <input
+                          type="checkbox"
+                          checked={storeSettings.enablePayPal}
+                          onChange={(e) => setStoreSettings({ ...storeSettings, enablePayPal: e.target.checked })}
+                          className="bg-[#1A1A1A] border-[#2D2D2D] text-[#C9A227] rounded"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* TAB: SECURITY */}
+            {activeTab === "Security" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D]">
+                  <h3 className="font-serif text-lg text-white">Security & Audit Center</h3>
+                  <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                    Monitor system admin logs, access permissions, and Two-Factor settings.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  {/* Users */}
+                  <div className="md:col-span-2 bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">Access Control Registry</h4>
+                    <div className="space-y-2">
+                      <div className="p-3 bg-[#111111] rounded border border-[#2D2D2D] flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-white">karthik@storyvault.app</p>
+                          <p className="text-[10px] text-[#A5A5A5]">Super Admin Profile</p>
+                        </div>
+                        <span className="bg-amber-950/80 text-amber-400 font-mono text-[9px] px-2 py-0.5 rounded border border-amber-500/30">SUPER ADMIN</span>
+                      </div>
+                      <div className="p-3 bg-[#111111] rounded border border-[#2D2D2D] flex justify-between items-center text-xs">
+                        <div>
+                          <p className="font-bold text-white">editor@storyvault.app</p>
+                          <p className="text-[10px] text-[#A5A5A5]">Content Editing Profile</p>
+                        </div>
+                        <span className="bg-[#1A1A1A] text-[#A5A5A5] font-mono text-[9px] px-2 py-0.5 rounded border border-[#2D2D2D]">EDITOR</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2FA */}
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-3">
+                    <h4 className="font-serif text-sm text-white">Multi-Factor Auth (2FA)</h4>
+                    <p className="text-xs text-[#A5A5A5]">Require authentication codes on system admin logins.</p>
+                    <div className="flex items-center gap-3 pt-2">
+                      <input
+                        type="checkbox"
+                        id="2fa-toggle"
+                        checked={is2FAEnabled}
+                        onChange={(e) => {
+                          setIs2FAEnabled(e.target.checked);
+                          triggerToast(e.target.checked ? "2FA authentication simulator initialized." : "2FA authentication disabled.", "warn");
+                        }}
+                        className="bg-[#111111] border border-[#2D2D2D] text-[#C9A227]"
+                      />
+                      <label htmlFor="2fa-toggle" className="text-xs text-white select-none cursor-pointer font-sans font-bold">
+                        Enable 2FA Verification
+                      </label>
+                    </div>
+
+                    {is2FAEnabled && (
+                      <div className="mt-4 p-3 bg-[#111111] rounded border border-[#2D2D2D] text-center space-y-2">
+                        <div className="w-20 h-20 bg-white mx-auto flex items-center justify-center border border-[#2D2D2D] p-1 font-mono text-[8px] text-black">
+                          [QR CODE MOCK]
+                        </div>
+                        <p className="text-[9px] font-mono text-[#A5A5A5]">Scan this QR inside Authenticator</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Audit Logs list */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                  <h4 className="font-serif text-sm text-white">Audit Event Logs</h4>
+                  {auditLogs.length === 0 ? (
+                    <p className="text-xs font-mono text-[#A5A5A5] italic">No events logged yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto max-h-60 overflow-y-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                            <th className="p-3">Action Type</th>
+                            <th className="p-3">User</th>
+                            <th className="p-3">IP Address</th>
+                            <th className="p-3">Timestamp</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {auditLogs.slice().reverse().map(l => (
+                            <tr key={l.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30">
+                              <td className="p-3 font-semibold text-white">{l.action}</td>
+                              <td className="p-3 text-[#A5A5A5]">{l.user}</td>
+                              <td className="p-3 font-mono text-[#A5A5A5]">{l.ipAddress}</td>
+                              <td className="p-3 font-mono text-[#A5A5A5]">{l.timestamp}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
 
@@ -2774,6 +3648,145 @@ export default function AdminPortal() {
                   className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
                 >
                   Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CMS COUPON MODAL */}
+      {isCouponModalOpen && selectedCoupon && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-[#C9A227]/50 rounded-lg max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#2D2D2D]">
+              <h3 className="font-serif text-lg text-white">
+                {couponModalMode === "create" ? "Create Promo Coupon" : "Edit Promo Coupon"}
+              </h3>
+              <button onClick={() => setIsCouponModalOpen(false)} className="text-[#A5A5A5] hover:text-[#C9A227]">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCoupon} className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Promo Code *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. CLASSIC20"
+                  value={selectedCoupon.code}
+                  onChange={(e) => setSelectedCoupon({ ...selectedCoupon, code: e.target.value.toUpperCase() })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded font-mono uppercase"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Discount (%)</label>
+                  <input
+                    type="number"
+                    required
+                    value={selectedCoupon.discount}
+                    onChange={(e) => setSelectedCoupon({ ...selectedCoupon, discount: parseInt(e.target.value) })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Max Uses</label>
+                  <input
+                    type="number"
+                    value={selectedCoupon.maxUses}
+                    onChange={(e) => setSelectedCoupon({ ...selectedCoupon, maxUses: parseInt(e.target.value) })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Expiry Date</label>
+                <input
+                  type="date"
+                  value={selectedCoupon.expiryDate}
+                  onChange={(e) => setSelectedCoupon({ ...selectedCoupon, expiryDate: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded font-mono"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCouponModalOpen(false)}
+                  className="bg-[#111111] border border-[#2D2D2D] text-white font-mono text-xs py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CMS MEDIA UPLOAD MODAL */}
+      {isMediaModalOpen && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-[#C9A227]/50 rounded-lg max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#2D2D2D]">
+              <h3 className="font-serif text-lg text-white">Upload New Asset</h3>
+              <button onClick={() => setIsMediaModalOpen(false)} className="text-[#A5A5A5] hover:text-[#C9A227]">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleAddMediaFile} className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Filename *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. custom-banner.png"
+                  value={newMediaName}
+                  onChange={(e) => setNewMediaName(e.target.value)}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Asset URL</label>
+                <input
+                  type="text"
+                  placeholder="Paste direct URL or leave blank..."
+                  value={newMediaUrl}
+                  onChange={(e) => setNewMediaUrl(e.target.value)}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">File Type</label>
+                <select
+                  value={newMediaType}
+                  onChange={(e) => setNewMediaType(e.target.value)}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                >
+                  <option value="image/png">Image (PNG)</option>
+                  <option value="image/webp">Image (WebP)</option>
+                  <option value="image/jpeg">Image (JPEG)</option>
+                  <option value="application/pdf">Document (PDF)</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMediaModalOpen(false)}
+                  className="bg-[#111111] border border-[#2D2D2D] text-white font-mono text-xs py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                >
+                  Upload File
                 </button>
               </div>
             </form>
