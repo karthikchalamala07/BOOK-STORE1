@@ -10,13 +10,40 @@ import {
   Download, Upload, Activity, Grid, List, ArrowUp, ArrowDown, Lock, 
   RefreshCw, SlidersHorizontal, Zap, HelpCircle, FileText, CheckCircle, AlertTriangle, Star
 } from "lucide-react";
-import { Book } from "../types";
+import { Book, Author } from "../types";
 
 // Firebase Imports
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../services/firebase";
+import { FEATURED_AUTHORS } from "../services/booksDb";
 
 // Extended Book Type for CMS
+// CMS Taxonomies
+interface CMSCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  visibility: boolean;
+  sortOrder: number;
+}
+
+interface CMSCollection {
+  id: string;
+  name: string;
+  description: string;
+  bookIds: string[];
+  visibility: boolean;
+  sortOrder: number;
+}
+
+interface CMSShelf {
+  id: string;
+  name: string;
+  category: string;
+  bookIds: string[];
+}
+
 interface CMSBook extends Book {
   subtitle?: string;
   price: number;
@@ -213,6 +240,28 @@ export default function AdminPortal() {
   const [sortOption, setSortOption] = useState("Newest");
   const [deleteConfirmBook, setDeleteConfirmBook] = useState<CMSBook | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Library, Homepage, Authors & Categories CMS States
+  const [authorsList, setAuthorsList] = useState<Author[]>([]);
+  const [categoriesList, setCategoriesList] = useState<CMSCategory[]>([]);
+  const [collectionsList, setCollectionsList] = useState<CMSCollection[]>([]);
+  const [shelvesList, setShelvesList] = useState<CMSShelf[]>([]);
+
+  // Dialog & Form edit states
+  const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+  const [authorModalMode, setAuthorModalMode] = useState<"create" | "edit">("create");
+
+  const [selectedCategory, setSelectedCategory] = useState<CMSCategory | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryModalMode, setCategoryModalMode] = useState<"create" | "edit">("create");
+
+  const [selectedCollection, setSelectedCollection] = useState<CMSCollection | null>(null);
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const [collectionModalMode, setCollectionModalMode] = useState<"create" | "edit">("create");
+
+  const [authorSearchQuery, setAuthorSearchQuery] = useState("");
+  const [catSearchQuery, setCatSearchQuery] = useState("");
   const [importResults, setImportResults] = useState<any[]>([]);
   const [modalMode, setModalMode] = useState<"create" | "edit" | "preview">("create");
   const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
@@ -262,6 +311,68 @@ export default function AdminPortal() {
     setIsLoading(true);
 
     // Initial local storage fallbacks load
+    // Authors listener & seed
+    const unsubAuthors = onSnapshot(collection(db, "authors"), (snap) => {
+      const list: Author[] = [];
+      snap.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() } as Author);
+      });
+      if (list.length === 0) {
+        FEATURED_AUTHORS.forEach(async (a) => {
+          await setDoc(doc(db, "authors", a.id), a);
+        });
+      } else {
+        setAuthorsList(list);
+      }
+    }, (err) => {
+      console.warn("Authors sync offline");
+    });
+
+    // Categories listener & seed
+    const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
+      const list: CMSCategory[] = [];
+      snap.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() } as CMSCategory);
+      });
+      if (list.length === 0) {
+        const DEFAULT_CATEGORIES = [
+          { id: "gothic", name: "Gothic", description: "Dark, mysterious, and supernatural tales.", icon: "Book", visibility: true, sortOrder: 1 },
+          { id: "adventure", name: "Adventure", description: "Exciting journeys and heroic quests.", icon: "Compass", visibility: true, sortOrder: 2 },
+          { id: "philosophy", name: "Philosophy", description: "Critical studies of life and knowledge.", icon: "Sliders", visibility: true, sortOrder: 3 },
+          { id: "strategy", name: "Strategy", description: "Tactics of warfare and conflict.", icon: "Shield", visibility: true, sortOrder: 4 },
+          { id: "drama", name: "Drama", description: "Emotional narratives and character conflicts.", icon: "Activity", visibility: true, sortOrder: 5 }
+        ];
+        DEFAULT_CATEGORIES.forEach(async (cat) => {
+          await setDoc(doc(db, "categories", cat.id), cat);
+        });
+      } else {
+        setCategoriesList(list);
+      }
+    }, (err) => {
+      console.warn("Categories sync offline");
+    });
+
+    // Collections listener & seed
+    const unsubCollections = onSnapshot(collection(db, "collections"), (snap) => {
+      const list: CMSCollection[] = [];
+      snap.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...docSnap.data() } as CMSCollection);
+      });
+      if (list.length === 0) {
+        const DEFAULT_COLLECTIONS = [
+          { id: "featured-classics", name: "Featured Classics", description: "Handpicked masterpieces of literature.", bookIds: [], visibility: true, sortOrder: 1 },
+          { id: "gothic-horrors", name: "Gothic Horrors", description: "Spooky and terrifying classic reads.", bookIds: [], visibility: true, sortOrder: 2 }
+        ];
+        DEFAULT_COLLECTIONS.forEach(async (col) => {
+          await setDoc(doc(db, "collections", col.id), col);
+        });
+      } else {
+        setCollectionsList(list);
+      }
+    }, (err) => {
+      console.warn("Collections sync offline");
+    });
+
     const loadLocalFallbacks = () => {
       // Books
       const localBooks = JSON.parse(localStorage.getItem("storyvault_books") || "[]");
@@ -416,6 +527,22 @@ export default function AdminPortal() {
       console.warn("Firestore analytics sync offline, using local fallback");
     });
 
+    // Homepage layout settings listener & seed
+    const unsubLayout = onSnapshot(doc(db, "layout", "homepage"), (docSnap) => {
+      if (docSnap.exists()) {
+        setHomepageLayout(docSnap.data().sections || []);
+      } else {
+        setDoc(doc(db, "layout", "homepage"), {
+          sections: [
+            { id: "section-hero", name: "Hero Banner (Classics Redefined)", visible: true },
+            { id: "section-featured", name: "Featured Books (Top 4 Carousel)", visible: true },
+            { id: "section-spotlight", name: "Mary Shelley Author Panel", visible: true },
+            { id: "section-newsletter", name: "Newsletter Signup", visible: true }
+          ]
+        });
+      }
+    });
+
     // Realtime storage listener for cross-tab local syncing
     const handleStorageEvent = (e: StorageEvent) => {
       if (
@@ -441,6 +568,10 @@ export default function AdminPortal() {
 
     return () => {
       unsubBooks();
+      unsubAuthors();
+      unsubCategories();
+      unsubCollections();
+      unsubLayout();
       unsubOrders();
       unsubCustomers();
       unsubCoupons();
@@ -720,6 +851,179 @@ export default function AdminPortal() {
 
     return result;
   }, [books, searchQuery, categoryFilter, languageFilter, formatFilter, featuredFilter, sortOption]);
+
+  // Authors CRUD Handlers
+  const handleOpenAuthorCreate = () => {
+    setSelectedAuthor({
+      id: `author-${Date.now()}`,
+      name: "",
+      portrait: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=400",
+      birthYear: 1800,
+      deathYear: null,
+      nationality: "Global",
+      biography: "",
+      booksWritten: 0,
+      featuredBooks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    setAuthorModalMode("create");
+    setIsAuthorModalOpen(true);
+  };
+
+  const handleOpenAuthorEdit = (a: Author) => {
+    setSelectedAuthor({ ...a });
+    setAuthorModalMode("edit");
+    setIsAuthorModalOpen(true);
+  };
+
+  const handleSaveAuthor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAuthor) return;
+    try {
+      await setDoc(doc(db, "authors", selectedAuthor.id), selectedAuthor);
+      triggerToast(`Author "${selectedAuthor.name}" saved successfully.`);
+      setIsAuthorModalOpen(false);
+    } catch (err) {
+      triggerToast("Failed to save author.", "error");
+    }
+  };
+
+  const handleDeleteAuthor = async (id: string) => {
+    if (confirm("Are you sure you want to delete this author?")) {
+      try {
+        await deleteDoc(doc(db, "authors", id));
+        triggerToast("Author profile deleted.");
+      } catch (err) {
+        triggerToast("Failed to delete author.", "error");
+      }
+    }
+  };
+
+  // Categories CRUD Handlers
+  const handleOpenCategoryCreate = () => {
+    setSelectedCategory({
+      id: `cat-${Date.now()}`,
+      name: "",
+      description: "",
+      icon: "Book",
+      visibility: true,
+      sortOrder: (categoriesList.length + 1)
+    });
+    setCategoryModalMode("create");
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleOpenCategoryEdit = (c: CMSCategory) => {
+    setSelectedCategory({ ...c });
+    setCategoryModalMode("edit");
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCategory) return;
+    try {
+      await setDoc(doc(db, "categories", selectedCategory.id), selectedCategory);
+      triggerToast(`Category "${selectedCategory.name}" saved successfully.`);
+      setIsCategoryModalOpen(false);
+    } catch (err) {
+      triggerToast("Failed to save category.", "error");
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (confirm("Are you sure you want to delete this category?")) {
+      try {
+        await deleteDoc(doc(db, "categories", id));
+        triggerToast("Category deleted.");
+      } catch (err) {
+        triggerToast("Failed to delete category.", "error");
+      }
+    }
+  };
+
+  // Collections CRUD Handlers
+  const handleOpenCollectionCreate = () => {
+    setSelectedCollection({
+      id: `col-${Date.now()}`,
+      name: "",
+      description: "",
+      bookIds: [],
+      visibility: true,
+      sortOrder: (collectionsList.length + 1)
+    });
+    setCollectionModalMode("create");
+    setIsCollectionModalOpen(true);
+  };
+
+  const handleSaveCollection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCollection) return;
+    try {
+      await setDoc(doc(db, "collections", selectedCollection.id), selectedCollection);
+      triggerToast(`Collection "${selectedCollection.name}" saved successfully.`);
+      setIsCollectionModalOpen(false);
+    } catch (err) {
+      triggerToast("Failed to save collection.", "error");
+    }
+  };
+
+  const handleDeleteCollection = async (id: string) => {
+    if (confirm("Are you sure you want to delete this collection?")) {
+      try {
+        await deleteDoc(doc(db, "collections", id));
+        triggerToast("Collection deleted.");
+      } catch (err) {
+        triggerToast("Failed to delete collection.", "error");
+      }
+    }
+  };
+
+  // Homepage builder sorting & publishing
+  const handleMoveSection = (index: number, direction: "up" | "down") => {
+    const nextLayout = [...homepageLayout];
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= nextLayout.length) return;
+    const temp = nextLayout[index];
+    nextLayout[index] = nextLayout[targetIdx];
+    nextLayout[targetIdx] = temp;
+    setHomepageLayout(nextLayout);
+  };
+
+  const handleToggleSectionVisibility = (index: number) => {
+    const nextLayout = [...homepageLayout];
+    nextLayout[index].visible = !nextLayout[index].visible;
+    setHomepageLayout(nextLayout);
+  };
+
+  const handlePublishLayout = async () => {
+    try {
+      await setDoc(doc(db, "layout", "homepage"), { sections: homepageLayout });
+      triggerToast("Homepage layout published successfully!", "success");
+      runConfetti();
+    } catch (e) {
+      triggerToast("Failed to publish layout.", "error");
+    }
+  };
+
+  const handleAddSection = (sectionName: string) => {
+    const nextLayout = [...homepageLayout];
+    const sectionId = "section-" + sectionName.toLowerCase().replace(/\s+/g, "-");
+    if (nextLayout.some(s => s.id === sectionId)) {
+      triggerToast("Section already exists.", "warn");
+      return;
+    }
+    nextLayout.push({ id: sectionId, name: sectionName, visible: true });
+    setHomepageLayout(nextLayout);
+    triggerToast(`Added ${sectionName} section.`);
+  };
+
+  const handleRemoveSection = (index: number) => {
+    const nextLayout = homepageLayout.filter((_, idx) => idx !== index);
+    setHomepageLayout(nextLayout);
+    triggerToast("Section removed.");
+  };
 
   // Book CRUD Handlers
   const handleOpenCreateModal = () => {
@@ -1557,8 +1861,469 @@ export default function AdminPortal() {
               </div>
             )}
 
+                        {/* TAB: LIBRARY CMS */}
+            {activeTab === "Library CMS" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Library CMS</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Configure literature shelves, digital collections, and category visibility.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenCollectionCreate}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add Collection
+                  </button>
+                </div>
+
+                {/* Featured Collections Table */}
+                <div className="bg-[#1A1A1A] rounded border border-[#2D2D2D] p-5 space-y-4">
+                  <h4 className="font-serif text-sm text-white">Curated Collections</h4>
+                  {collectionsList.length === 0 ? (
+                    <p className="text-xs font-mono text-[#A5A5A5] italic">No collections added yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                            <th className="p-3">Collection Name</th>
+                            <th className="p-3">Description</th>
+                            <th className="p-3">Visibility</th>
+                            <th className="p-3">Sort Order</th>
+                            <th className="p-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {collectionsList.map(col => (
+                            <tr key={col.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30">
+                              <td className="p-3 font-semibold text-white">{col.name}</td>
+                              <td className="p-3 text-[#A5A5A5] max-w-[300px] truncate">{col.description}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                  col.visibility ? "bg-green-950/80 border border-green-500/30 text-green-400" : "bg-red-950/80 border border-red-500/30 text-red-400"
+                                }`}>
+                                  {col.visibility ? "VISIBLE" : "HIDDEN"}
+                                </span>
+                              </td>
+                              <td className="p-3 font-mono text-[#A5A5A5]">{col.sortOrder}</td>
+                              <td className="p-3 text-right">
+                                <button
+                                  onClick={() => handleDeleteCollection(col.id)}
+                                  className="p-1 text-red-400 hover:text-red-300 hover:bg-[#111111] rounded cursor-pointer"
+                                  title="Delete Collection"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Virtual Shelves section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-3">
+                    <h4 className="font-serif text-sm text-white">Virtual Bookshelves</h4>
+                    <p className="text-xs text-[#A5A5A5]">Organize digital books into thematic tiers on the public shelf display.</p>
+                    <div className="space-y-2 mt-2">
+                      <div className="p-3 bg-[#111111] rounded border border-[#2D2D2D] flex justify-between items-center text-xs">
+                        <span className="font-mono text-white">Top Classics Shelf</span>
+                        <span className="text-[10px] font-mono text-[#A5A5A5]">4 books</span>
+                      </div>
+                      <div className="p-3 bg-[#111111] rounded border border-[#2D2D2D] flex justify-between items-center text-xs">
+                        <span className="font-mono text-white">Recent Additions Shelf</span>
+                        <span className="text-[10px] font-mono text-[#A5A5A5]">3 books</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-3">
+                    <h4 className="font-serif text-sm text-white">Reading Preview Controls</h4>
+                    <p className="text-xs text-[#A5A5A5]">Configure global access parameters for non-purchased literature files.</p>
+                    <div className="space-y-4 mt-2">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[9px] font-mono text-[#A5A5A5] uppercase">Preview Content Limit</label>
+                        <select className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded">
+                          <option>First Chapter Only</option>
+                          <option>First 20 Pages (Responsive)</option>
+                          <option>Complete Preview Allowed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: HOMEPAGE BUILDER */}
+            {activeTab === "Homepage Builder" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Homepage Layout Builder</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Drag, drop, reorder, or toggle components of the main landing catalog screen.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleAddSection(e.target.value);
+                          e.target.value = "";
+                        }
+                      }}
+                      className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227]"
+                    >
+                      <option value="">+ Add Section</option>
+                      <option value="Popular Books">Popular Books</option>
+                      <option value="Authors">Authors</option>
+                      <option value="Categories">Categories</option>
+                      <option value="Testimonials">Testimonials</option>
+                    </select>
+                    <button
+                      onClick={handlePublishLayout}
+                      className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                    >
+                      Publish Layout
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  
+                  {/* Left Column: Sections List */}
+                  <div className="lg:col-span-5 bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">Layout Sections Order</h4>
+                    <div className="space-y-2">
+                      {homepageLayout.map((sec, idx) => (
+                        <div key={sec.id} className="flex justify-between items-center p-3 bg-[#111111] rounded border border-[#2D2D2D] hover:border-[#C9A227]/30 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={sec.visible}
+                              onChange={() => handleToggleSectionVisibility(idx)}
+                              className="rounded bg-[#1A1A1A] border-[#2D2D2D] text-[#C9A227] cursor-pointer"
+                            />
+                            <span className={`text-xs font-mono text-white ${!sec.visible && "line-through opacity-40"}`}>
+                              {sec.name}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleMoveSection(idx, "up")}
+                              disabled={idx === 0}
+                              className="p-1 hover:bg-[#1A1A1A] rounded disabled:opacity-20 text-[#A5A5A5] cursor-pointer"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleMoveSection(idx, "down")}
+                              disabled={idx === homepageLayout.length - 1}
+                              className="p-1 hover:bg-[#1A1A1A] rounded disabled:opacity-20 text-[#A5A5A5] cursor-pointer"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveSection(idx)}
+                              className="p-1 text-red-500 hover:bg-[#1A1A1A] rounded cursor-pointer"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Live Mobile Stack Preview */}
+                  <div className="lg:col-span-7 bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] space-y-4">
+                    <h4 className="font-serif text-sm text-white">Live Layout Simulation</h4>
+                    <div className="border border-[#2D2D2D] rounded-xl overflow-hidden max-w-sm mx-auto shadow-2xl bg-[#111111] flex flex-col h-[500px]">
+                      
+                      {/* Browser Mock bar */}
+                      <div className="bg-[#1A1A1A] p-2 border-b border-[#2D2D2D] flex items-center gap-1 shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        <div className="flex-1 bg-[#111111] text-[8px] text-[#A5A5A5] px-2 py-0.5 rounded text-center font-mono">
+                          storyvault.app
+                        </div>
+                      </div>
+
+                      {/* Stack Content */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none">
+                        
+                        {/* Header Mock */}
+                        <div className="border-b border-[#2D2D2D]/60 pb-2 flex justify-between items-center">
+                          <span className="font-serif text-xs font-bold text-white tracking-widest">STORYVAULT</span>
+                          <span className="w-4 h-3 flex flex-col justify-between"><span className="h-0.5 bg-white w-full"/><span className="h-0.5 bg-white w-full"/><span className="h-0.5 bg-white w-full"/></span>
+                        </div>
+
+                        {/* Custom layout stack */}
+                        {homepageLayout.filter(s => s.visible).map(sec => {
+                          if (sec.id === "section-hero") {
+                            return (
+                              <div key={sec.id} className="p-6 bg-gradient-to-r from-amber-950/20 to-[#1A1A1A] rounded border border-amber-500/20 text-center space-y-1.5">
+                                <h5 className="text-[10px] font-serif text-[#C9A227]">Hero Banner</h5>
+                                <p className="text-[7px] text-[#A5A5A5] uppercase font-mono tracking-widest">Classics Redefined</p>
+                              </div>
+                            );
+                          }
+                          if (sec.id === "section-featured") {
+                            return (
+                              <div key={sec.id} className="p-4 bg-[#1A1A1A] rounded border border-[#2D2D2D] space-y-2">
+                                <h5 className="text-[9px] font-serif text-white">Featured Books</h5>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  <div className="h-10 bg-[#111111] rounded border border-[#2D2D2D]"/>
+                                  <div className="h-10 bg-[#111111] rounded border border-[#2D2D2D]"/>
+                                  <div className="h-10 bg-[#111111] rounded border border-[#2D2D2D]"/>
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (sec.id === "section-spotlight") {
+                            return (
+                              <div key={sec.id} className="p-4 bg-[#1A1A1A] rounded border border-[#2D2D2D] flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[#2D2D2D] shrink-0" />
+                                <div className="space-y-1 flex-1">
+                                  <h5 className="text-[8px] font-serif text-white">Mary Shelley Spotlight</h5>
+                                  <div className="h-1 bg-[#2D2D2D] w-3/4 rounded" />
+                                </div>
+                              </div>
+                            );
+                          }
+                          if (sec.id === "section-newsletter") {
+                            return (
+                              <div key={sec.id} className="p-4 bg-[#1A1A1A] rounded border border-[#2D2D2D] text-center space-y-2">
+                                <h5 className="text-[8px] font-mono text-[#A5A5A5] uppercase">Join the Chronicle</h5>
+                                <div className="h-4 bg-[#111111] rounded border border-[#2D2D2D] max-w-[150px] mx-auto"/>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div key={sec.id} className="p-3 bg-[#1A1A1A] rounded border border-dashed border-[#2D2D2D] text-center">
+                              <span className="text-[8px] font-mono text-[#A5A5A5] uppercase">{sec.name}</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* Footer Mock */}
+                        <div className="pt-4 border-t border-[#2D2D2D] text-center">
+                          <span className="text-[6px] font-mono text-[#A5A5A5]">© 2026 STORYVAULT COLLECTIVE</span>
+                        </div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* TAB: AUTHORS */}
+            {activeTab === "Authors" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Authors Registry</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Curate profile biographies, national origins, and portrait links.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenAuthorCreate}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add Author
+                  </button>
+                </div>
+
+                {/* Filter and Search */}
+                <div className="bg-[#1A1A1A] p-4 rounded border border-[#2D2D2D] flex gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-2.5 top-2.5 text-[#A5A5A5]" size={13} />
+                    <input
+                      type="text"
+                      placeholder="Search authors registry..."
+                      value={authorSearchQuery}
+                      onChange={(e) => setAuthorSearchQuery(e.target.value)}
+                      className="w-full bg-[#111111] border border-[#2D2D2D] py-1.5 pl-8 pr-3 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Authors Grid/List */}
+                {authorsList.filter(a => a.name.toLowerCase().includes(authorSearchQuery.toLowerCase())).length === 0 ? (
+                  <div className="bg-[#1A1A1A] p-12 rounded border border-dashed border-[#2D2D2D] text-center space-y-2">
+                    <span className="font-mono text-xs text-[#A5A5A5] uppercase italic">No authors registered</span>
+                  </div>
+                ) : (
+                  <div className="bg-[#1A1A1A] rounded border border-[#2D2D2D] overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                          <th className="p-4 w-12">Portrait</th>
+                          <th className="p-4">Name</th>
+                          <th className="p-4">Origin</th>
+                          <th className="p-4">Lifespan</th>
+                          <th className="p-4">Biography</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {authorsList.filter(a => a.name.toLowerCase().includes(authorSearchQuery.toLowerCase())).map(a => (
+                          <tr key={a.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30">
+                            <td className="p-4">
+                              <img
+                                src={a.portrait || "/authors/default-author.webp"}
+                                alt={a.name}
+                                className="w-8 h-8 rounded-full object-cover border border-[#2D2D2D]"
+                              />
+                            </td>
+                            <td className="p-4 font-semibold text-white">{a.name}</td>
+                            <td className="p-4 text-[#A5A5A5]">{a.nationality}</td>
+                            <td className="p-4 font-mono text-[#A5A5A5]">
+                              {a.birthYear} - {a.deathYear || "Present"}
+                            </td>
+                            <td className="p-4 text-[#A5A5A5] max-w-[300px] truncate">{a.biography}</td>
+                            <td className="p-4 text-right">
+                              <div className="flex justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleOpenAuthorEdit(a)}
+                                  className="p-1 text-blue-400 hover:bg-[#111111] rounded cursor-pointer"
+                                  title="Edit Author"
+                                >
+                                  <Edit size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAuthor(a.id)}
+                                  className="p-1 text-red-400 hover:bg-[#111111] rounded cursor-pointer"
+                                  title="Delete Author"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: CATEGORIES */}
+            {activeTab === "Categories" && (
+              <div className="space-y-6">
+                
+                {/* Header */}
+                <div className="bg-[#1A1A1A] p-5 rounded border border-[#2D2D2D] flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif text-lg text-white">Genre & Category Taxonomy</h3>
+                    <p className="text-[10px] font-mono text-[#A5A5A5] mt-1">
+                      Configure store categories, descriptions, indexing, and visibility states.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleOpenCategoryCreate}
+                    className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-4 rounded flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus size={14} /> Add Category
+                  </button>
+                </div>
+
+                {/* Filter and Search */}
+                <div className="bg-[#1A1A1A] p-4 rounded border border-[#2D2D2D] flex gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-2.5 top-2.5 text-[#A5A5A5]" size={13} />
+                    <input
+                      type="text"
+                      placeholder="Search categories taxonomy..."
+                      value={catSearchQuery}
+                      onChange={(e) => setCatSearchQuery(e.target.value)}
+                      className="w-full bg-[#111111] border border-[#2D2D2D] py-1.5 pl-8 pr-3 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Categories Table list */}
+                {categoriesList.filter(c => c.name.toLowerCase().includes(catSearchQuery.toLowerCase())).length === 0 ? (
+                  <div className="bg-[#1A1A1A] p-12 rounded border border-dashed border-[#2D2D2D] text-center space-y-2">
+                    <span className="font-mono text-xs text-[#A5A5A5] uppercase italic">No categories registered</span>
+                  </div>
+                ) : (
+                  <div className="bg-[#1A1A1A] rounded border border-[#2D2D2D] overflow-hidden">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-[#2D2D2D] text-[10px] font-mono text-[#A5A5A5] uppercase bg-[#111111]/40">
+                          <th className="p-4">Category Name</th>
+                          <th className="p-4">Description</th>
+                          <th className="p-4">Icon Name</th>
+                          <th className="p-4">Book Count</th>
+                          <th className="p-4">Visibility</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {categoriesList.filter(c => c.name.toLowerCase().includes(catSearchQuery.toLowerCase())).map(c => {
+                          const bookCount = books.filter(b => b.genre === c.name).length;
+                          return (
+                            <tr key={c.id} className="border-b border-[#2D2D2D]/60 hover:bg-[#111111]/30">
+                              <td className="p-4 font-semibold text-white">{c.name}</td>
+                              <td className="p-4 text-[#A5A5A5]">{c.description}</td>
+                              <td className="p-4 font-mono text-[#A5A5A5]">{c.icon}</td>
+                              <td className="p-4 font-mono text-white">{bookCount} books</td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold ${
+                                  c.visibility ? "bg-green-950/80 border border-green-500/30 text-green-400" : "bg-red-950/80 border border-red-500/30 text-red-400"
+                                }`}>
+                                  {c.visibility ? "VISIBLE" : "HIDDEN"}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <button
+                                    onClick={() => handleOpenCategoryEdit(c)}
+                                    className="p-1 text-blue-400 hover:bg-[#111111] rounded cursor-pointer"
+                                    title="Edit Category"
+                                  >
+                                    <Edit size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCategory(c.id)}
+                                    className="p-1 text-red-400 hover:bg-[#111111] rounded cursor-pointer"
+                                    title="Delete Category"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
                         {/* General Fallback for other tabs */}
-            {!["Dashboard", "Orders", "Reviews", "Customers", "Inventory", "Books"].includes(activeTab) && (
+            {!["Dashboard", "Orders", "Reviews", "Customers", "Inventory", "Books", "Library CMS", "Homepage Builder", "Authors", "Categories"].includes(activeTab) && (
               <div className="bg-[#1A1A1A] p-10 rounded border border-[#2D2D2D] text-center space-y-4">
                 <Sparkles size={40} className="text-[#C9A227] mx-auto opacity-40 animate-pulse" />
                 <h3 className="font-serif text-xl text-white">{activeTab} Live Portal</h3>
@@ -1780,6 +2545,239 @@ export default function AdminPortal() {
               </button>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* CMS AUTHOR MODAL */}
+      {isAuthorModalOpen && selectedAuthor && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-[#C9A227]/50 rounded-lg max-w-xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="flex justify-between items-center pb-2 border-b border-[#2D2D2D] mb-4 shrink-0">
+              <h3 className="font-serif text-lg text-white">
+                {authorModalMode === "create" ? "Register New Author" : "Edit Author Profile"}
+              </h3>
+              <button onClick={() => setIsAuthorModalOpen(false)} className="text-[#A5A5A5] hover:text-[#C9A227] cursor-pointer">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveAuthor} className="flex-1 overflow-y-auto space-y-4 pr-1">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Author Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={selectedAuthor.name}
+                  onChange={(e) => setSelectedAuthor({ ...selectedAuthor, name: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded focus:border-[#C9A227] focus:outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Nationality / Country</label>
+                  <input
+                    type="text"
+                    value={selectedAuthor.nationality}
+                    onChange={(e) => setSelectedAuthor({ ...selectedAuthor, nationality: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Books Written Count</label>
+                  <input
+                    type="number"
+                    value={selectedAuthor.booksWritten}
+                    onChange={(e) => setSelectedAuthor({ ...selectedAuthor, booksWritten: parseInt(e.target.value) })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Birth Year</label>
+                  <input
+                    type="number"
+                    value={selectedAuthor.birthYear}
+                    onChange={(e) => setSelectedAuthor({ ...selectedAuthor, birthYear: parseInt(e.target.value) })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Death Year (null if alive)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 1888"
+                    value={selectedAuthor.deathYear || ""}
+                    onChange={(e) => setSelectedAuthor({ ...selectedAuthor, deathYear: e.target.value ? parseInt(e.target.value) : null })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Portrait Image URL</label>
+                <input
+                  type="text"
+                  value={selectedAuthor.portrait}
+                  onChange={(e) => setSelectedAuthor({ ...selectedAuthor, portrait: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs font-mono text-white rounded"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Biography</label>
+                <textarea
+                  value={selectedAuthor.biography}
+                  onChange={(e) => setSelectedAuthor({ ...selectedAuthor, biography: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 h-24 text-xs text-white rounded focus:border-[#C9A227] resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAuthorModalOpen(false)}
+                  className="bg-[#111111] border border-[#2D2D2D] text-white font-mono text-xs py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CMS CATEGORY MODAL */}
+      {isCategoryModalOpen && selectedCategory && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-[#C9A227]/50 rounded-lg max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#2D2D2D]">
+              <h3 className="font-serif text-lg text-white">
+                {categoryModalMode === "create" ? "Create Genre Category" : "Edit Genre Profile"}
+              </h3>
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-[#A5A5A5] hover:text-[#C9A227]">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCategory} className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Genre Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={selectedCategory.name}
+                  onChange={(e) => setSelectedCategory({ ...selectedCategory, name: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Description</label>
+                <textarea
+                  value={selectedCategory.description}
+                  onChange={(e) => setSelectedCategory({ ...selectedCategory, description: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 h-16 text-xs text-white rounded resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Icon Name</label>
+                  <input
+                    type="text"
+                    value={selectedCategory.icon}
+                    onChange={(e) => setSelectedCategory({ ...selectedCategory, icon: e.target.value })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Sort Order</label>
+                  <input
+                    type="number"
+                    value={selectedCategory.sortOrder}
+                    onChange={(e) => setSelectedCategory({ ...selectedCategory, sortOrder: parseInt(e.target.value) })}
+                    className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="cat-visibility"
+                  checked={selectedCategory.visibility}
+                  onChange={(e) => setSelectedCategory({ ...selectedCategory, visibility: e.target.checked })}
+                  className="bg-[#111111] border border-[#2D2D2D] text-[#C9A227]"
+                />
+                <label htmlFor="cat-visibility" className="text-xs text-white select-none cursor-pointer">
+                  Visible to Public Readers
+                </label>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryModalOpen(false)}
+                  className="bg-[#111111] border border-[#2D2D2D] text-white font-mono text-xs py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CMS COLLECTION MODAL */}
+      {isCollectionModalOpen && selectedCollection && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
+          <div className="bg-[#1A1A1A] border border-[#C9A227]/50 rounded-lg max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#2D2D2D]">
+              <h3 className="font-serif text-lg text-white">Create Curated Collection</h3>
+              <button onClick={() => setIsCollectionModalOpen(false)} className="text-[#A5A5A5] hover:text-[#C9A227]">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveCollection} className="space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Collection Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={selectedCollection.name}
+                  onChange={(e) => setSelectedCollection({ ...selectedCollection, name: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 text-xs text-white rounded"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-mono text-[#A5A5A5] uppercase">Description</label>
+                <textarea
+                  value={selectedCollection.description}
+                  onChange={(e) => setSelectedCollection({ ...selectedCollection, description: e.target.value })}
+                  className="bg-[#111111] border border-[#2D2D2D] p-2 h-16 text-xs text-white rounded resize-none"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsCollectionModalOpen(false)}
+                  className="bg-[#111111] border border-[#2D2D2D] text-white font-mono text-xs py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-[#C9A227] hover:bg-[#B89220] text-black font-mono font-bold text-xs py-2 px-6 rounded cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
