@@ -2,7 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from "
 
 
 
+
+
+
+
 import { 
+
+
+
+
 
 
 
@@ -10,7 +18,15 @@ import {
 
 
 
+
+
+
+
   addDoc, runTransaction, getDocs, writeBatch, query, where 
+
+
+
+
 
 
 
@@ -22,7 +38,19 @@ import {
 
 
 
+
+
+
+
+
+
+
+
 export interface ToastMessage {
+
+
+
+
 
 
 
@@ -30,7 +58,15 @@ export interface ToastMessage {
 
 
 
+
+
+
+
   title: string;
+
+
+
+
 
 
 
@@ -38,7 +74,15 @@ export interface ToastMessage {
 
 
 
+
+
+
+
   duration?: number;
+
+
+
+
 
 
 
@@ -46,7 +90,15 @@ export interface ToastMessage {
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -54,11 +106,23 @@ import { signInAnonymously, onAuthStateChanged, User as FirebaseUser, createUser
 
 
 
+
+
+
+
 import { db, auth, isFirebaseConfigValid, firebaseInitializationError } from "../services/firebase";
 
 
 
+
+
+
+
 import { Book } from "../types";
+
+
+
+
 
 
 
@@ -70,7 +134,19 @@ import { resolveBookCover } from "../services/coverService";
 
 
 
+
+
+
+
+
+
+
+
 export interface CartItem {
+
+
+
+
 
 
 
@@ -78,7 +154,15 @@ export interface CartItem {
 
 
 
+
+
+
+
   format: "physical" | "ebook";
+
+
+
+
 
 
 
@@ -86,11 +170,27 @@ export interface CartItem {
 
 
 
+
+
+
+
   quantity: number;
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -102,7 +202,15 @@ export interface Coupon {
 
 
 
+
+
+
+
   code: string;
+
+
+
+
 
 
 
@@ -110,7 +218,19 @@ export interface Coupon {
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -122,7 +242,15 @@ export interface ShippingDetails {
 
 
 
+
+
+
+
   fullName: string;
+
+
+
+
 
 
 
@@ -130,7 +258,15 @@ export interface ShippingDetails {
 
 
 
+
+
+
+
   addressLine: string;
+
+
+
+
 
 
 
@@ -138,7 +274,15 @@ export interface ShippingDetails {
 
 
 
+
+
+
+
   postalCode: string;
+
+
+
+
 
 
 
@@ -146,7 +290,19 @@ export interface ShippingDetails {
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -158,7 +314,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   books: Book[];
+
+
+
+
 
 
 
@@ -166,7 +330,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   wishlist: string[];
+
+
+
+
 
 
 
@@ -174,7 +346,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   activeCoupon: Coupon | null;
+
+
+
+
 
 
 
@@ -182,7 +362,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   currentUser: FirebaseUser | null;
+
+
+
+
 
 
 
@@ -190,7 +378,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   isFirebaseConfigValid: boolean;
+
+
+
+
 
 
 
@@ -198,7 +394,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   currentAdmin: any;
+
+
+
+
 
 
 
@@ -206,7 +410,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   toasts: ToastMessage[];
+
+
+
+
 
 
 
@@ -214,7 +426,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   addToast: (toast: Omit<ToastMessage, "id">) => void;
+
+
+
+
 
 
 
@@ -222,7 +442,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   addToCart: (book: Book, format: "physical" | "ebook", price: number) => void;
+
+
+
+
 
 
 
@@ -230,7 +458,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   clearCart: () => void;
+
+
+
+
 
 
 
@@ -238,7 +474,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   isInWishlist: (bookId: string) => boolean;
+
+
+
+
 
 
 
@@ -246,7 +490,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   removeCoupon: () => void;
+
+
+
+
 
 
 
@@ -254,7 +506,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   checkout: () => Promise<{ success: boolean; orderId: string; receipt?: any }>;
+
+
+
+
 
 
 
@@ -262,7 +522,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   verifyAndActivateCode: (code: string) => Promise<{ success: boolean; book?: Book; message: string; codeDetails?: any }>;
+
+
+
+
 
 
 
@@ -270,7 +538,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   saveReadingProgress: (bookId: string, chapterIndex: number, pageIndex: number) => Promise<void>;
+
+
+
+
 
 
 
@@ -278,7 +554,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   customerLogin: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
+
+
+
+
 
 
 
@@ -286,7 +570,15 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   adminLogin: (email: string, password: string, rememberMe: boolean) => Promise<{ success: boolean; error?: string }>;
+
+
+
+
 
 
 
@@ -294,11 +586,27 @@ interface BookstoreContextType {
 
 
 
+
+
+
+
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -314,7 +622,19 @@ const BookstoreContext = createContext<BookstoreContextType | undefined>(undefin
 
 
 
+
+
+
+
+
+
+
+
 export function BookstoreProvider({ children }: { children: React.ReactNode }) {
+
+
+
+
 
 
 
@@ -322,7 +642,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const [cart, setCart] = useState<CartItem[]>([]);
+
+
+
+
 
 
 
@@ -330,7 +658,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const [purchasedBooks, setPurchasedBooks] = useState<string[]>([]);
+
+
+
+
 
 
 
@@ -338,7 +674,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const [shippingDetails, setShippingDetails] = useState<ShippingDetails | null>(null);
+
+
+
+
 
 
 
@@ -346,7 +690,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+
+
+
+
 
 
 
@@ -354,11 +706,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
 
 
 
+
+
+
+
   const [receipts, setReceipts] = useState<any[]>([]);
+
+
+
+
 
 
 
@@ -370,7 +734,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   // Auto-login stored admin session upon mounting
+
+
+
+
 
 
 
@@ -378,7 +754,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const storedAdmin = localStorage.getItem("storyvault_admin") || sessionStorage.getItem("storyvault_admin");
+
+
+
+
 
 
 
@@ -386,7 +770,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       try {
+
+
+
+
 
 
 
@@ -394,7 +786,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       } catch (_) {}
+
+
+
+
 
 
 
@@ -402,7 +802,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   }, []);
+
+
+
+
+
+
+
+
 
 
 
@@ -414,7 +826,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const id = Math.random().toString(36).substring(2, 9);
+
+
+
+
 
 
 
@@ -422,7 +842,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const newToast = { id, ...toast };
+
+
+
+
 
 
 
@@ -430,7 +858,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     setTimeout(() => {
+
+
+
+
 
 
 
@@ -438,11 +874,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }, duration);
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -454,7 +906,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     setToasts(prev => prev.filter(t => t.id !== id));
+
+
+
+
 
 
 
@@ -466,7 +926,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   // 1. Initialize Authentication and User Sync
+
+
+
+
 
 
 
@@ -474,7 +946,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     if (!auth) {
+
+
+
+
 
 
 
@@ -482,7 +962,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return;
+
+
+
+
 
 
 
@@ -490,7 +978,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
+
+
+
+
 
 
 
@@ -498,7 +994,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         setCurrentUser(user);
+
+
+
+
 
 
 
@@ -506,7 +1010,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         // Sync user document
+
+
+
+
 
 
 
@@ -514,7 +1026,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const userSnap = await getDoc(userRef);
+
+
+
+
 
 
 
@@ -522,7 +1042,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const defaultName = user.displayName || "Guest Reader";
+
+
+
+
 
 
 
@@ -530,7 +1058,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           await setDoc(userRef, {
+
+
+
+
 
 
 
@@ -538,7 +1074,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             name: defaultName,
+
+
+
+
 
 
 
@@ -546,7 +1090,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             role: "customer",
+
+
+
+
 
 
 
@@ -554,7 +1106,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             wishlist: [],
+
+
+
+
 
 
 
@@ -562,11 +1122,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             createdAt: new Date().toISOString()
 
 
 
+
+
+
+
           });
+
+
+
+
 
 
 
@@ -578,7 +1150,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
         // Setup real-time listener for user profile sync
+
+
+
+
 
 
 
@@ -586,7 +1170,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           if (docSnap.exists()) {
+
+
+
+
 
 
 
@@ -594,7 +1186,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             setCurrentUserProfile(data);
+
+
+
+
 
 
 
@@ -602,7 +1202,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             setWishlist(data.wishlist || []);
+
+
+
+
 
 
 
@@ -610,7 +1218,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           } else {
+
+
+
+
 
 
 
@@ -618,11 +1234,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           }
 
 
 
+
+
+
+
           setIsAuthLoading(false);
+
+
+
+
 
 
 
@@ -630,7 +1258,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           console.warn("Failed to listen user doc:", err);
+
+
+
+
 
 
 
@@ -638,7 +1274,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
+
+
+
+
+
+
+
+
 
 
 
@@ -650,7 +1298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const receiptsQuery = query(collection(db, "receipts"), where("customerId", "==", user.uid));
+
+
+
+
 
 
 
@@ -658,7 +1314,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const fetched: any[] = [];
+
+
+
+
 
 
 
@@ -666,7 +1330,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             fetched.push({ id: docSnap.id, ...docSnap.data() });
+
+
+
+
 
 
 
@@ -674,11 +1346,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           setReceipts(fetched);
 
 
 
+
+
+
+
         });
+
+
+
+
+
+
+
+
 
 
 
@@ -690,7 +1378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           unsubUserDoc();
+
+
+
+
 
 
 
@@ -698,7 +1394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         };
+
+
+
+
 
 
 
@@ -706,7 +1410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         setCurrentUser(null);
+
+
+
+
 
 
 
@@ -714,7 +1426,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         setIsAuthLoading(false);
+
+
+
+
 
 
 
@@ -722,7 +1442,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         signInAnonymously(auth).catch(err => {
+
+
+
+
 
 
 
@@ -730,11 +1458,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -746,7 +1486,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
     return () => unsubAuth();
+
+
+
+
 
 
 
@@ -758,7 +1510,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   // Setup fallback local storage receipts for guest / offline users
+
+
+
+
 
 
 
@@ -766,7 +1530,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     if (!currentUser) {
+
+
+
+
 
 
 
@@ -774,11 +1546,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setReceipts(local);
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -790,7 +1574,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   // 2. Real-time Books Sync and Seeding
+
+
+
+
 
 
 
@@ -798,7 +1594,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     if (!db) {
+
+
+
+
 
 
 
@@ -806,7 +1610,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       import("../services/booksDb").then(({ CLASSICS_DATABASE }) => {
+
+
+
+
 
 
 
@@ -814,7 +1626,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           // Resolve cover url safely
+
+
+
+
 
 
 
@@ -822,7 +1642,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           if (b.id === "dracula") cover = "/dracula-cover.jpg";
+
+
+
+
 
 
 
@@ -830,7 +1658,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "sherlock-holmes") cover = "/sherlock-holmes-cover.jpg";
+
+
+
+
 
 
 
@@ -838,7 +1674,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "jane-eyre") cover = "/jane-eyre-cover.jpg";
+
+
+
+
 
 
 
@@ -846,7 +1690,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "the-time-machine") cover = "/time-machine-cover.jpg";
+
+
+
+
 
 
 
@@ -854,7 +1706,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "the-metamorphosis") cover = "/metamorphosis-cover.jpg";
+
+
+
+
 
 
 
@@ -862,7 +1722,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "moby-dick") cover = "/moby-dick-cover.jpg";
+
+
+
+
 
 
 
@@ -870,7 +1738,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "peter-pan") cover = "/peter-pan-cover.jpg";
+
+
+
+
 
 
 
@@ -878,7 +1754,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "crime-and-punishment") cover = "/crime-punishment-cover.jpg";
+
+
+
+
 
 
 
@@ -886,7 +1770,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "les-miserables") cover = "/les-miserables-cover.jpg";
+
+
+
+
 
 
 
@@ -894,7 +1786,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           else if (b.id === "the-divine-comedy") cover = "/divine-comedy-cover.jpg";
+
+
+
+
 
 
 
@@ -906,7 +1806,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
           return {
+
+
+
+
 
 
 
@@ -914,7 +1826,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             title: b.title,
+
+
+
+
 
 
 
@@ -922,7 +1842,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             description: b.description,
+
+
+
+
 
 
 
@@ -930,7 +1858,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             language: b.language || "English",
+
+
+
+
 
 
 
@@ -938,7 +1874,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             year: b.year,
+
+
+
+
 
 
 
@@ -946,7 +1890,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             coverUrl: cover,
+
+
+
+
 
 
 
@@ -954,7 +1906,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             featured: ["dracula", "pride-and-prejudice", "sherlock-holmes", "the-count-of-monte-cristo"].includes(b.id),
+
+
+
+
 
 
 
@@ -962,7 +1922,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             price: ["dracula", "pride-and-prejudice", "sherlock-holmes", "the-count-of-monte-cristo"].includes(b.id) ? 14.99 : 9.99,
+
+
+
+
 
 
 
@@ -970,7 +1938,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             previewDuration: 20,
+
+
+
+
 
 
 
@@ -978,7 +1954,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             quote: b.quote || "",
+
+
+
+
 
 
 
@@ -986,7 +1970,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           };
+
+
+
+
 
 
 
@@ -994,11 +1986,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         setBooks(fallbackBooks);
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -1006,7 +2010,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1014,7 +2026,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const featuredTargetIds = ["dracula", "pride-and-prejudice", "sherlock-holmes", "the-count-of-monte-cristo"];
+
+
+
+
 
 
 
@@ -1022,7 +2042,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -1030,11 +2058,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         existingIds.push(dSnap.id);
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -1050,7 +2094,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       if (snap.size < 100 || missingFeatured) {
+
+
+
+
 
 
 
@@ -1058,7 +2114,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const { CLASSICS_DATABASE } = await import("../services/booksDb");
+
+
+
+
 
 
 
@@ -1066,7 +2130,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           
+
+
+
+
 
 
 
@@ -1074,7 +2146,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const cover = resolveBookCover(b);
+
+
+
+
 
 
 
@@ -1082,7 +2162,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const seedBook = {
+
+
+
+
 
 
 
@@ -1090,7 +2178,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               author: b.author,
+
+
+
+
 
 
 
@@ -1098,7 +2194,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               genre: b.genre,
+
+
+
+
 
 
 
@@ -1106,7 +2210,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               publicationYear: b.year,
+
+
+
+
 
 
 
@@ -1114,7 +2226,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               coverImage: cover,
+
+
+
+
 
 
 
@@ -1122,7 +2242,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               rating: 4.9,
+
+
+
+
 
 
 
@@ -1130,7 +2258,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               isFeatured: featuredTargetIds.includes(b.id),
+
+
+
+
 
 
 
@@ -1138,7 +2274,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               previewAvailable: true,
+
+
+
+
 
 
 
@@ -1146,7 +2290,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               stock: featuredTargetIds.includes(b.id) ? 25 : 50,
+
+
+
+
 
 
 
@@ -1154,7 +2306,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               isbn: `978-0-14-1439-${b.id}-7`,
+
+
+
+
 
 
 
@@ -1162,7 +2322,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               seoMetaTitle: `${b.title} | STORYVAULT Editions`,
+
+
+
+
 
 
 
@@ -1170,7 +2338,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               seoCanonical: `https://storyvault.com/books/${b.id}`,
+
+
+
+
 
 
 
@@ -1178,7 +2354,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               version: 1,
+
+
+
+
 
 
 
@@ -1186,7 +2370,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               previewContent: b.chapters || [],
+
+
+
+
 
 
 
@@ -1194,7 +2386,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               totalPages: 150,
+
+
+
+
 
 
 
@@ -1202,7 +2402,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               downloadURL: `https://firebasestorage.googleapis.com/v0/b/storyvault-bookos.appspot.com/o/ebooks%2F${b.id}.pdf?alt=media`,
+
+
+
+
 
 
 
@@ -1210,7 +2418,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               bookType: "Digital",
+
+
+
+
 
 
 
@@ -1218,7 +2434,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               updatedAt: new Date().toISOString()
+
+
+
+
 
 
 
@@ -1226,7 +2450,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             batch.set(bookRef, seedBook);
+
+
+
+
 
 
 
@@ -1234,7 +2466,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           await batch.commit();
+
+
+
+
 
 
 
@@ -1242,7 +2482,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           console.error("Failed to seed books to Content Repository:", seedErr);
+
+
+
+
 
 
 
@@ -1250,7 +2498,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -1258,7 +2514,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         snap.forEach(docSnap => {
+
+
+
+
 
 
 
@@ -1266,7 +2530,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
+
+
+
+
 
 
 
@@ -1274,11 +2546,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
 
 
 
+
+
+
+
     });
+
+
+
+
+
+
+
+
 
 
 
@@ -1290,7 +2578,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   }, []);
+
+
+
+
+
+
+
+
 
 
 
@@ -1302,7 +2602,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const updateFirestoreUser = async (newCart: CartItem[], newWishlist?: string[]) => {
+
+
+
+
 
 
 
@@ -1310,7 +2618,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -1318,7 +2634,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const updates: any = { cart: newCart };
+
+
+
+
 
 
 
@@ -1326,7 +2650,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await updateDoc(userRef, updates);
+
+
+
+
 
 
 
@@ -1334,7 +2666,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       console.warn("Offline fallback state active:", e);
+
+
+
+
 
 
 
@@ -1342,7 +2682,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1354,7 +2706,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const newCart = [...cart];
+
+
+
+
 
 
 
@@ -1362,7 +2722,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     if (existingIdx > -1) {
+
+
+
+
 
 
 
@@ -1370,7 +2738,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     } else {
+
+
+
+
 
 
 
@@ -1378,7 +2754,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1386,7 +2770,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     updateFirestoreUser(newCart);
+
+
+
+
 
 
 
@@ -1394,7 +2786,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       title: "✓ Added to Cart",
+
+
+
+
 
 
 
@@ -1402,11 +2802,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     });
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1418,7 +2834,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const bookTitle = cart.find(item => item.book.id === bookId && item.format === format)?.book.title || "Book";
+
+
+
+
 
 
 
@@ -1426,7 +2850,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     setCart(newCart);
+
+
+
+
 
 
 
@@ -1434,7 +2866,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     addToast({
+
+
+
+
 
 
 
@@ -1442,7 +2882,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       message: `"${bookTitle}" has been removed from your cart.`
+
+
+
+
 
 
 
@@ -1450,7 +2898,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1462,7 +2922,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     setCart([]);
+
+
+
+
 
 
 
@@ -1470,7 +2938,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1482,7 +2962,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const newWishlist = wishlist.includes(bookId)
+
+
+
+
 
 
 
@@ -1490,7 +2978,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       : [...wishlist, bookId];
+
+
+
+
 
 
 
@@ -1498,11 +2994,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     updateFirestoreUser(cart, newWishlist);
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1518,7 +3030,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   const applyCoupon = (code: string): boolean => {
+
+
+
+
 
 
 
@@ -1526,7 +3050,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     if (cleanCode === "WELCOME20") {
+
+
+
+
 
 
 
@@ -1534,7 +3066,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return true;
+
+
+
+
 
 
 
@@ -1542,7 +3082,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setActiveCoupon({ code: "PRESERVATION", discount: 0.30 });
+
+
+
+
 
 
 
@@ -1550,7 +3098,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -1558,7 +3114,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -1574,7 +3142,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   const saveShipping = (details: ShippingDetails) => setShippingDetails(details);
+
+
+
+
+
+
+
+
 
 
 
@@ -1586,11 +3170,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const orderId = `SV-${Math.floor(100000 + Math.random() * 900000)}`;
 
 
 
+
+
+
+
     const itemsTotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+
+
+
+
 
 
 
@@ -1602,7 +3198,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
     const orderDoc = {
+
+
+
+
 
 
 
@@ -1610,7 +3218,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       orderId,
+
+
+
+
 
 
 
@@ -1618,7 +3234,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       customerName: shippingDetails?.fullName || "Guest Reader",
+
+
+
+
 
 
 
@@ -1626,7 +3250,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       customerPhone: "9876543210",
+
+
+
+
 
 
 
@@ -1634,7 +3266,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         bookId: item.book.id,
+
+
+
+
 
 
 
@@ -1642,7 +3282,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         price: item.price,
+
+
+
+
 
 
 
@@ -1650,7 +3298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         cover: item.book.coverUrl
+
+
+
+
 
 
 
@@ -1658,7 +3314,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       subtotal: parseFloat(itemsTotal.toFixed(2)),
+
+
+
+
 
 
 
@@ -1666,7 +3330,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       shipping: 5.00,
+
+
+
+
 
 
 
@@ -1674,7 +3346,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       paymentMethod: "Card",
+
+
+
+
 
 
 
@@ -1682,7 +3362,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       orderStatus: "Confirmed" as const,
+
+
+
+
 
 
 
@@ -1690,7 +3378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         ? `${shippingDetails.addressLine}, ${shippingDetails.city}, ${shippingDetails.postalCode}, ${shippingDetails.country}`
+
+
+
+
 
 
 
@@ -1698,7 +3394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       createdAt: new Date().toISOString().replace("T", " ").slice(0, 19),
+
+
+
+
 
 
 
@@ -1706,7 +3410,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     };
+
+
+
+
+
+
+
+
 
 
 
@@ -1718,7 +3434,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const hasPhysical = cart.some(item => item.format === "physical");
+
+
+
+
 
 
 
@@ -1726,7 +3450,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -1734,7 +3466,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, "");
+
+
+
+
 
 
 
@@ -1742,7 +3482,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     // Receipt numbers are generated only for orders with physical books
+
+
+
+
 
 
 
@@ -1750,11 +3498,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       ? `SVR-${yyyymmdd}-${Math.floor(100000 + Math.random() * 900000)}` 
 
 
 
+
+
+
+
       : "";
+
+
+
+
 
 
 
@@ -1762,7 +3522,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     // Digital access codes are generated only for orders with digital books
+
+
+
+
 
 
 
@@ -1770,11 +3538,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       ? `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}` 
 
 
 
+
+
+
+
       : "";
+
+
+
+
+
+
+
+
 
 
 
@@ -1786,7 +3570,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const receiptDoc = {
+
+
+
+
 
 
 
@@ -1794,7 +3586,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       orderId,
+
+
+
+
 
 
 
@@ -1802,7 +3602,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       customerName: shippingDetails?.fullName || "Guest Reader",
+
+
+
+
 
 
 
@@ -1810,7 +3618,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       bookId: cart[0]?.book.id || "mixed",
+
+
+
+
 
 
 
@@ -1818,7 +3634,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         bookId: item.book.id,
+
+
+
+
 
 
 
@@ -1826,7 +3650,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         cover: item.book.coverUrl,
+
+
+
+
 
 
 
@@ -1834,7 +3666,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         price: item.price,
+
+
+
+
 
 
 
@@ -1842,7 +3682,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         digitalAccessCode: item.format === "ebook" ? `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}` : ""
+
+
+
+
 
 
 
@@ -1850,7 +3698,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       receiptNumber,
+
+
+
+
 
 
 
@@ -1858,7 +3714,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       bookType: hasPhysical && hasDigital ? "Mixed" : hasPhysical ? "Physical" : "Digital",
+
+
+
+
 
 
 
@@ -1866,7 +3730,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       amount: totalWithTax,
+
+
+
+
 
 
 
@@ -1874,7 +3746,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       shippingAddress: orderDoc.shippingAddress
+
+
+
+
 
 
 
@@ -1886,7 +3766,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -1894,7 +3786,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await runTransaction(db, async (transaction) => {
+
+
+
+
 
 
 
@@ -1902,7 +3802,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const bookRef = doc(db, "books", item.book.id);
+
+
+
+
 
 
 
@@ -1910,7 +3818,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           if (bookSnap.exists()) {
+
+
+
+
 
 
 
@@ -1918,7 +3834,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const newStock = Math.max(0, currentStock - item.quantity);
+
+
+
+
 
 
 
@@ -1926,11 +3850,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               stock: newStock,
 
 
 
+
+
+
+
               isAvailable: newStock > 0
+
+
+
+
 
 
 
@@ -1942,7 +3878,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
             // If stock <= 10, generate low stock alert notification
+
+
+
+
 
 
 
@@ -1950,7 +3898,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               const notificationRef = doc(collection(db, "notifications"));
+
+
+
+
 
 
 
@@ -1958,7 +3914,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
                 id: notificationRef.id,
+
+
+
+
 
 
 
@@ -1966,7 +3930,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
                 title: `Low Stock Alert: ${item.book.title}`,
+
+
+
+
 
 
 
@@ -1974,7 +3946,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
                 read: false,
+
+
+
+
 
 
 
@@ -1982,7 +3962,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               });
+
+
+
+
 
 
 
@@ -1990,7 +3978,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           }
+
+
+
+
 
 
 
@@ -1998,7 +3994,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -2010,7 +4018,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await setDoc(doc(db, "orders", orderId), orderDoc);
+
+
+
+
+
+
+
+
 
 
 
@@ -2022,7 +4042,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await setDoc(doc(db, "receipts", receiptId), receiptDoc);
+
+
+
+
+
+
+
+
 
 
 
@@ -2034,7 +4066,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       for (const item of cart) {
+
+
+
+
 
 
 
@@ -2042,7 +4082,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const activationCode = receiptDoc.digitalAccessCode || `SV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+
+
+
 
 
 
@@ -2050,7 +4098,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             activationCode,
+
+
+
+
 
 
 
@@ -2058,7 +4114,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             bookId: item.book.id,
+
+
+
+
 
 
 
@@ -2066,7 +4130,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             receiptId,
+
+
+
+
 
 
 
@@ -2074,7 +4146,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             activatedBy: "",
+
+
+
+
 
 
 
@@ -2082,11 +4162,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             createdAt: new Date().toISOString()
 
 
 
+
+
+
+
           };
+
+
+
+
 
 
 
@@ -2098,7 +4190,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
           // Auto activation: immediately add to user's digital library
+
+
+
+
 
 
 
@@ -2106,7 +4210,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const libDoc = {
+
+
+
+
 
 
 
@@ -2114,7 +4226,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               activatedAt: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -2122,7 +4242,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               lastOpened: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -2130,7 +4258,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               notes: []
+
+
+
+
 
 
 
@@ -2138,7 +4274,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             await setDoc(doc(db, "users", currentUser.uid, "digitalLibrary", item.book.id), libDoc);
+
+
+
+
 
 
 
@@ -2146,7 +4290,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             // Sync local storage library
+
+
+
+
 
 
 
@@ -2154,7 +4306,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+
+
+
+
 
 
 
@@ -2162,7 +4322,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               localLib.push(libDoc);
+
+
+
+
 
 
 
@@ -2170,7 +4338,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             }
+
+
+
+
 
 
 
@@ -2178,11 +4354,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2194,7 +4386,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const adminNotifRef = doc(collection(db, "notifications"));
+
+
+
+
 
 
 
@@ -2202,7 +4402,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         id: adminNotifRef.id,
+
+
+
+
 
 
 
@@ -2210,7 +4418,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         title: "New Bookstore Purchase",
+
+
+
+
 
 
 
@@ -2218,7 +4434,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         read: false,
+
+
+
+
 
 
 
@@ -2226,7 +4450,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -2238,7 +4474,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const analyticsRef = doc(db, "analytics", "summary");
+
+
+
+
 
 
 
@@ -2246,7 +4490,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const snap = await transaction.get(analyticsRef);
+
+
+
+
 
 
 
@@ -2254,7 +4506,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const data = snap.data();
+
+
+
+
 
 
 
@@ -2262,7 +4522,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             revenue: (data.revenue || 0) + orderDoc.total,
+
+
+
+
 
 
 
@@ -2270,11 +4538,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             customersCount: (data.customersCount || 0) + 1
 
 
 
+
+
+
+
           });
+
+
+
+
 
 
 
@@ -2282,7 +4562,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           transaction.set(analyticsRef, {
+
+
+
+
 
 
 
@@ -2290,7 +4578,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             ordersCount: 1,
+
+
+
+
 
 
 
@@ -2298,7 +4594,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             visitors: 24,
+
+
+
+
 
 
 
@@ -2306,7 +4610,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           });
+
+
+
+
 
 
 
@@ -2314,7 +4626,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -2326,7 +4650,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const newlyPurchased = cart.map(item => item.book.id);
+
+
+
+
 
 
 
@@ -2334,7 +4666,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const userRef = doc(db, "users", currentUser.uid);
+
+
+
+
 
 
 
@@ -2342,7 +4682,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         newlyPurchased.forEach(id => {
+
+
+
+
 
 
 
@@ -2350,7 +4698,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             updatedPurchased.push(id);
+
+
+
+
 
 
 
@@ -2358,7 +4714,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
+
+
+
+
 
 
 
@@ -2366,7 +4730,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           purchasedBooks: updatedPurchased,
+
+
+
+
 
 
 
@@ -2374,7 +4746,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
+
+
+
+
 
 
 
@@ -2382,7 +4762,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2394,7 +4786,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       console.warn("Cloud checkout failed. Using offline fallback:", checkoutErr);
+
+
+
+
 
 
 
@@ -2402,7 +4802,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       // Fallback local storage orders list
+
+
+
+
 
 
 
@@ -2410,7 +4818,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       localOrders.push(orderDoc);
+
+
+
+
 
 
 
@@ -2422,7 +4838,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // Fallback local storage notifications
+
+
+
+
 
 
 
@@ -2430,7 +4858,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       localNotifs.push({
+
+
+
+
 
 
 
@@ -2438,7 +4874,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         type: "order",
+
+
+
+
 
 
 
@@ -2446,7 +4890,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: `${orderDoc.customerName} placed order ${orderId} for a total of $${orderDoc.total}`,
+
+
+
+
 
 
 
@@ -2454,11 +4906,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         createdAt: new Date().toISOString()
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -2470,7 +4934,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // Fallback local storage analytics
+
+
+
+
 
 
 
@@ -2478,11 +4954,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       localAnalytics.revenue += orderDoc.total;
 
 
 
+
+
+
+
       localAnalytics.ordersCount += 1;
+
+
+
+
 
 
 
@@ -2494,7 +4982,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // Fallback local receipts
+
+
+
+
 
 
 
@@ -2502,11 +5002,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       localReceipts.push(receiptDoc);
 
 
 
+
+
+
+
       localStorage.setItem("storyvault_receipts", JSON.stringify(localReceipts));
+
+
+
+
 
 
 
@@ -2518,7 +5030,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // Fallback local activation codes
+
+
+
+
 
 
 
@@ -2526,7 +5050,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       for (const item of cart) {
+
+
+
+
 
 
 
@@ -2534,7 +5066,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const vaultCodeDoc = {
+
+
+
+
 
 
 
@@ -2542,7 +5082,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             customerId: currentUser?.uid || "guest",
+
+
+
+
 
 
 
@@ -2550,7 +5098,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             orderId,
+
+
+
+
 
 
 
@@ -2558,7 +5114,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             status: "AVAILABLE",
+
+
+
+
 
 
 
@@ -2566,7 +5130,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             activatedAt: "",
+
+
+
+
 
 
 
@@ -2574,7 +5146,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           };
+
+
+
+
 
 
 
@@ -2586,7 +5166,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
           // Auto activation for local fallback
+
+
+
+
 
 
 
@@ -2594,7 +5186,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const libDoc = {
+
+
+
+
 
 
 
@@ -2602,7 +5202,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               activatedAt: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -2610,7 +5218,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               lastOpened: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -2618,7 +5234,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               notes: []
+
+
+
+
 
 
 
@@ -2626,7 +5250,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             const localLibKey = `storyvault_users_${currentUser.uid}_digital_library`;
+
+
+
+
 
 
 
@@ -2634,7 +5266,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             if (!localLib.some((libItem: any) => libItem.bookId === item.book.id)) {
+
+
+
+
 
 
 
@@ -2642,7 +5282,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
               localStorage.setItem(localLibKey, JSON.stringify(localLib));
+
+
+
+
 
 
 
@@ -2650,7 +5298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           }
+
+
+
+
 
 
 
@@ -2658,7 +5314,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -2670,7 +5334,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // Dispatch simulated StorageEvent manually for same-tab updates
+
+
+
+
 
 
 
@@ -2682,7 +5358,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       const newlyPurchased = cart.map(item => item.book.id);
+
+
+
+
 
 
 
@@ -2690,7 +5378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const updated = [...prev];
+
+
+
+
 
 
 
@@ -2698,7 +5394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           if (!updated.includes(id)) updated.push(id);
+
+
+
+
 
 
 
@@ -2706,7 +5410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         return updated;
+
+
+
+
 
 
 
@@ -2714,7 +5426,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -2726,7 +5450,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     removeCoupon();
+
+
+
+
 
 
 
@@ -2734,7 +5466,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -2746,7 +5490,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const cleanCode = code.trim().toUpperCase();
+
+
+
+
 
 
 
@@ -2754,7 +5506,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -2762,7 +5522,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const { getDoc, doc, setDoc, updateDoc } = await import("firebase/firestore");
+
+
+
+
 
 
 
@@ -2770,7 +5538,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       let codeDoc = null;
+
+
+
+
 
 
 
@@ -2782,7 +5558,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // Check local storage first for instant offline/local resolution
+
+
+
+
 
 
 
@@ -2790,7 +5578,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const foundLocal = local.find((c: any) => c.activationCode === cleanCode);
+
+
+
+
 
 
 
@@ -2798,7 +5594,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       if (foundLocal) {
+
+
+
+
 
 
 
@@ -2806,7 +5610,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         isLocal = true;
+
+
+
+
 
 
 
@@ -2814,7 +5626,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         try {
+
+
+
+
 
 
 
@@ -2822,7 +5642,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const docSnap = await getDoc(docRef);
+
+
+
+
 
 
 
@@ -2830,7 +5658,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             codeDoc = docSnap.data();
+
+
+
+
 
 
 
@@ -2838,7 +5674,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         } catch (dbErr) {
+
+
+
+
 
 
 
@@ -2846,11 +5690,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2862,11 +5722,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         return { success: false, message: "This activation code does not exist." };
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2878,7 +5754,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       if (codeDoc.customerId !== "guest" && codeDoc.customerId !== uid) {
+
+
+
+
 
 
 
@@ -2886,7 +5770,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2898,7 +5794,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       if (codeDoc.status === "REDEEMED") {
+
+
+
+
 
 
 
@@ -2906,7 +5810,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           const targetBook = books.find(b => b.id === codeDoc.bookId);
+
+
+
+
 
 
 
@@ -2914,7 +5826,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             success: true,
+
+
+
+
 
 
 
@@ -2922,7 +5842,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             book: targetBook,
+
+
+
+
 
 
 
@@ -2930,7 +5858,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             codeDetails: codeDoc
+
+
+
+
 
 
 
@@ -2938,7 +5874,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         } else {
+
+
+
+
 
 
 
@@ -2946,11 +5890,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         }
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2962,11 +5922,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         return { success: false, message: "This activation code has been revoked." };
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2978,11 +5954,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         return { success: false, message: "This activation code has expired." };
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -2994,7 +5986,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const activatedAt = new Date().toISOString();
+
+
+
+
+
+
+
+
 
 
 
@@ -3006,7 +6010,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         await updateDoc(doc(db, "activationCodes", cleanCode), {
+
+
+
+
 
 
 
@@ -3014,7 +6026,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           activatedBy: uid,
+
+
+
+
 
 
 
@@ -3022,7 +6042,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
+
+
+
+
 
 
 
@@ -3030,7 +6058,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const local = JSON.parse(localStorage.getItem("storyvault_activation_codes") || "[]");
+
+
+
+
 
 
 
@@ -3038,7 +6074,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           c.activationCode === cleanCode 
+
+
+
+
 
 
 
@@ -3046,7 +6090,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             : c
+
+
+
+
 
 
 
@@ -3054,11 +6106,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         localStorage.setItem("storyvault_activation_codes", JSON.stringify(updatedLocal));
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -3070,7 +6138,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const libDoc = {
+
+
+
+
 
 
 
@@ -3078,7 +6154,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         activatedAt,
+
+
+
+
 
 
 
@@ -3086,7 +6170,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         lastOpened: activatedAt,
+
+
+
+
 
 
 
@@ -3094,11 +6186,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         notes: []
 
 
 
+
+
+
+
       };
+
+
+
+
+
+
+
+
 
 
 
@@ -3110,11 +6218,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         await setDoc(doc(db, "users", uid, "digitalLibrary", codeDoc.bookId), libDoc);
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -3126,7 +6250,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+
+
+
+
 
 
 
@@ -3134,11 +6266,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         localLib.push(libDoc);
 
 
 
+
+
+
+
         localStorage.setItem(localLibKey, JSON.stringify(localLib));
+
+
+
+
 
 
 
@@ -3150,7 +6294,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -3158,11 +6314,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Your purchase has been verified successfully!"
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -3174,7 +6346,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         success: true,
+
+
+
+
 
 
 
@@ -3182,7 +6362,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Success",
+
+
+
+
 
 
 
@@ -3190,7 +6378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           activationCode: cleanCode,
+
+
+
+
 
 
 
@@ -3198,7 +6394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           activatedBy: uid,
+
+
+
+
 
 
 
@@ -3206,7 +6410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -3218,7 +6430,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
     } catch (err) {
+
+
+
+
 
 
 
@@ -3226,7 +6450,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: false, message: "System error verifying the activation code." };
+
+
+
+
 
 
 
@@ -3234,7 +6466,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -3246,7 +6490,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const uid = currentUser?.uid || "guest";
+
+
+
+
 
 
 
@@ -3254,7 +6506,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -3262,7 +6522,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const { getDocs, collection } = await import("firebase/firestore");
+
+
+
+
 
 
 
@@ -3270,7 +6538,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const list: any[] = [];
+
+
+
+
 
 
 
@@ -3278,11 +6554,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         list.push(docSnap.data());
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -3294,7 +6586,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const merged = [...list];
+
+
+
+
 
 
 
@@ -3302,7 +6602,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         if (!merged.some(m => m.bookId === item.bookId)) {
+
+
+
+
 
 
 
@@ -3310,7 +6618,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -3318,7 +6634,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return merged;
+
+
+
+
 
 
 
@@ -3326,7 +6650,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       console.warn("Cloud fetch failed, checking local storage:", err);
+
+
+
+
 
 
 
@@ -3334,11 +6666,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -3350,7 +6698,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const uid = currentUser?.uid || "guest";
+
+
+
+
 
 
 
@@ -3358,7 +6714,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -3366,7 +6730,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const { doc, updateDoc } = await import("firebase/firestore");
+
+
+
+
 
 
 
@@ -3374,7 +6746,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         lastOpened: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -3382,7 +6762,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         pageIndex
+
+
+
+
 
 
 
@@ -3390,7 +6778,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     } catch (err) {
+
+
+
+
 
 
 
@@ -3398,7 +6794,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -3406,7 +6810,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const localLib = JSON.parse(localStorage.getItem(localLibKey) || "[]");
+
+
+
+
 
 
 
@@ -3414,7 +6826,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       if (item.bookId === bookId) {
+
+
+
+
 
 
 
@@ -3422,7 +6842,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           ...item,
+
+
+
+
 
 
 
@@ -3430,7 +6858,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           chapterIndex,
+
+
+
+
 
 
 
@@ -3438,7 +6874,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         };
+
+
+
+
 
 
 
@@ -3446,7 +6890,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return item;
+
+
+
+
 
 
 
@@ -3454,11 +6906,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     localStorage.setItem(localLibKey, JSON.stringify(updated));
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -3470,7 +6938,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -3478,7 +6954,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       let foundReceipt = null;
+
+
+
+
 
 
 
@@ -3486,7 +6970,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         const receiptSnap = await getDoc(doc(db, "receipts", receiptId));
+
+
+
+
 
 
 
@@ -3494,7 +6986,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           foundReceipt = receiptSnap.data();
+
+
+
+
 
 
 
@@ -3502,7 +7002,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       } catch (e) {
+
+
+
+
 
 
 
@@ -3510,7 +7018,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -3518,7 +7034,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       if (!foundReceipt) {
+
+
+
+
 
 
 
@@ -3526,11 +7050,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         foundReceipt = local.find((r: any) => r.receiptId === receiptId || r.receiptNumber === receiptId || r.digitalAccessCode === receiptId);
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -3542,11 +7082,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         throw new Error("Ownership verification failed: Receipt document not registered.");
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -3558,7 +7114,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const hasPurchased = foundReceipt.books.some((b: any) => b.bookId === bookId);
+
+
+
+
 
 
 
@@ -3566,11 +7130,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         throw new Error("Ownership verification failed: Book not present on purchase receipt.");
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -3582,7 +7162,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const bookSnap = await getDoc(doc(db, "books", bookId));
+
+
+
+
 
 
 
@@ -3590,7 +7178,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         throw new Error("Metadata check failed: Book not found in catalog.");
+
+
+
+
 
 
 
@@ -3598,11 +7194,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
 
 
 
+
+
+
+
       const bookData = bookSnap.data();
+
+
+
+
 
 
 
@@ -3614,7 +7222,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // 3. Retrieve download URL from storage
+
+
+
+
 
 
 
@@ -3622,7 +7242,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const { storage } = await import("../services/firebase");
+
+
+
+
 
 
 
@@ -3630,7 +7258,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const storageRef = ref(storage, storagePath);
+
+
+
+
 
 
 
@@ -3642,7 +7278,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // 4. Trigger browser file download automatically
+
+
+
+
 
 
 
@@ -3650,7 +7298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       a.href = downloadUrl;
+
+
+
+
 
 
 
@@ -3658,11 +7314,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       document.body.appendChild(a);
 
 
 
+
+
+
+
       a.click();
+
+
+
+
 
 
 
@@ -3674,7 +7342,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // 5. Save history log to firebase
+
+
+
+
 
 
 
@@ -3682,7 +7362,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const downloadRecord = {
+
+
+
+
 
 
 
@@ -3690,7 +7378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         receiptId,
+
+
+
+
 
 
 
@@ -3698,7 +7394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         customerId: foundReceipt.customerId,
+
+
+
+
 
 
 
@@ -3706,7 +7410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         device: navigator.userAgent
+
+
+
+
 
 
 
@@ -3714,7 +7426,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -3722,7 +7442,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         await setDoc(doc(db, "downloadHistory", historyId), downloadRecord);
+
+
+
+
 
 
 
@@ -3730,7 +7458,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         console.warn("Failed to log download history to cloud, using local backup:", histErr);
+
+
+
+
 
 
 
@@ -3738,11 +7474,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         localHistory.push(downloadRecord);
 
 
 
+
+
+
+
         localStorage.setItem("storyvault_download_history", JSON.stringify(localHistory));
+
+
+
+
 
 
 
@@ -3754,7 +7502,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       // 6. Show success toast notification
+
+
+
+
 
 
 
@@ -3762,7 +7522,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         title: "✓ Download Started",
+
+
+
+
 
 
 
@@ -3770,7 +7538,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
+
+
+
+
 
 
 
@@ -3782,7 +7562,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       console.error("eBook download execution failed:", err);
+
+
+
+
 
 
 
@@ -3790,7 +7578,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -3798,7 +7594,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "The requested eBook is unavailable. Please contact support."
+
+
+
+
 
 
 
@@ -3806,11 +7610,35 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3830,7 +7658,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const getFriendlyAuthError = (err: any): string => {
+
+
+
+
 
 
 
@@ -3838,7 +7674,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     const code = err?.code || "";
+
+
+
+
 
 
 
@@ -3846,7 +7690,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     
+
+
+
+
 
 
 
@@ -3854,11 +7706,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return "Unable to sign in. Please try again later or contact support.";
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -3866,11 +7730,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return "Invalid email or password. Please verify credentials.";
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -3878,11 +7754,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return "This email is already registered. Please sign in instead.";
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -3890,7 +7778,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return "Password is too weak. Please use at least 6 characters.";
+
+
+
+
 
 
 
@@ -3898,11 +7794,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     return "Unable to sign in. Please try again later or contact support.";
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -3914,7 +7826,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const customerSignup = async (fullName: string, email: string, password: string) => {
+
+
+
+
 
 
 
@@ -3922,11 +7842,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const mockProfile = {
 
 
 
+
+
+
+
         uid: "local-mock-customer-uid",
+
+
+
+
 
 
 
@@ -3934,7 +7866,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: email,
+
+
+
+
 
 
 
@@ -3942,7 +7882,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         cart: [],
+
+
+
+
 
 
 
@@ -3950,7 +7898,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         purchasedBooks: [],
+
+
+
+
 
 
 
@@ -3958,7 +7914,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       };
+
+
+
+
 
 
 
@@ -3966,7 +7930,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setCurrentUser({
+
+
+
+
 
 
 
@@ -3974,7 +7946,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: email,
+
+
+
+
 
 
 
@@ -3982,7 +7962,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         isAnonymous: false
+
+
+
+
 
 
 
@@ -3990,7 +7978,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -3998,7 +7994,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: `Welcome to StoryVault, ${fullName}!`
+
+
+
+
 
 
 
@@ -4006,11 +8010,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: true };
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -4022,7 +8042,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+
+
+
 
 
 
@@ -4030,7 +8058,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4038,7 +8074,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         uid: user.uid,
+
+
+
+
 
 
 
@@ -4046,7 +8090,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: email,
+
+
+
+
 
 
 
@@ -4054,7 +8106,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         cart: [],
+
+
+
+
 
 
 
@@ -4062,7 +8122,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         purchasedBooks: [],
+
+
+
+
 
 
 
@@ -4070,7 +8138,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -4078,7 +8154,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -4086,7 +8170,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: `Welcome to StoryVault, ${fullName}!`
+
+
+
+
 
 
 
@@ -4094,7 +8186,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: true };
+
+
+
+
 
 
 
@@ -4102,7 +8202,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: false, error: getFriendlyAuthError(err) };
+
+
+
+
 
 
 
@@ -4110,7 +8218,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -4122,7 +8242,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const customerLogin = async (email: string, password: string, rememberMe: boolean) => {
+
+
+
+
 
 
 
@@ -4130,11 +8258,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const mockProfile = {
 
 
 
+
+
+
+
         uid: "local-mock-customer-uid",
+
+
+
+
 
 
 
@@ -4142,7 +8282,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: email,
+
+
+
+
 
 
 
@@ -4150,7 +8298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         cart: [],
+
+
+
+
 
 
 
@@ -4158,7 +8314,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         purchasedBooks: [],
+
+
+
+
 
 
 
@@ -4166,7 +8330,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       };
+
+
+
+
 
 
 
@@ -4174,7 +8346,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setCurrentUser({
+
+
+
+
 
 
 
@@ -4182,7 +8362,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: email,
+
+
+
+
 
 
 
@@ -4190,7 +8378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         isAnonymous: false
+
+
+
+
 
 
 
@@ -4198,7 +8394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -4206,7 +8410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Welcome back to StoryVault!"
+
+
+
+
 
 
 
@@ -4214,11 +8426,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: true };
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -4230,7 +8458,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await signInWithEmailAndPassword(auth, email, password);
+
+
+
+
 
 
 
@@ -4238,7 +8474,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         title: "Login Successful",
+
+
+
+
 
 
 
@@ -4246,7 +8490,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -4254,7 +8506,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     } catch (err: any) {
+
+
+
+
 
 
 
@@ -4262,11 +8522,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -4278,7 +8554,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const customerLogout = async () => {
+
+
+
+
 
 
 
@@ -4286,7 +8570,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setCurrentUserProfile(null);
+
+
+
+
 
 
 
@@ -4294,7 +8586,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -4302,7 +8602,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Preservation profile disconnected successfully (Offline Mode)."
+
+
+
+
 
 
 
@@ -4310,11 +8618,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return;
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -4326,7 +8650,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await signOut(auth);
+
+
+
+
 
 
 
@@ -4334,7 +8666,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -4342,7 +8682,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Preservation profile disconnected successfully."
+
+
+
+
 
 
 
@@ -4350,7 +8698,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     } catch (err) {
+
+
+
+
 
 
 
@@ -4358,11 +8714,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -4374,7 +8746,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const loginWithGoogle = async () => {
+
+
+
+
 
 
 
@@ -4382,11 +8762,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const mockProfile = {
 
 
 
+
+
+
+
         uid: "local-mock-google-uid",
+
+
+
+
 
 
 
@@ -4394,7 +8786,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: "google@storyvault.com",
+
+
+
+
 
 
 
@@ -4402,7 +8802,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         cart: [],
+
+
+
+
 
 
 
@@ -4410,7 +8818,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         purchasedBooks: [],
+
+
+
+
 
 
 
@@ -4418,7 +8834,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       };
+
+
+
+
 
 
 
@@ -4426,7 +8850,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setCurrentUser({
+
+
+
+
 
 
 
@@ -4434,7 +8866,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         email: "google@storyvault.com",
+
+
+
+
 
 
 
@@ -4442,7 +8882,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         isAnonymous: false
+
+
+
+
 
 
 
@@ -4450,7 +8898,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -4458,7 +8914,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Signed in successfully with Google."
+
+
+
+
 
 
 
@@ -4466,11 +8930,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: true };
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -4482,7 +8962,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const provider = new GoogleAuthProvider();
+
+
+
+
 
 
 
@@ -4490,11 +8978,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const user = result.user;
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4502,7 +9002,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const userSnap = await getDoc(userRef);
+
+
+
+
 
 
 
@@ -4510,7 +9018,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         await setDoc(userRef, {
+
+
+
+
 
 
 
@@ -4518,7 +9034,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           name: user.displayName || "StoryVault Reader",
+
+
+
+
 
 
 
@@ -4526,7 +9050,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           role: "customer",
+
+
+
+
 
 
 
@@ -4534,7 +9066,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           wishlist: [],
+
+
+
+
 
 
 
@@ -4542,7 +9082,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           createdAt: new Date().toISOString()
+
+
+
+
 
 
 
@@ -4550,7 +9098,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -4558,7 +9114,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -4566,7 +9130,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Signed in successfully with Google."
+
+
+
+
 
 
 
@@ -4574,7 +9146,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: true };
+
+
+
+
 
 
 
@@ -4582,7 +9162,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       return { success: false, error: getFriendlyAuthError(err) };
+
+
+
+
 
 
 
@@ -4590,7 +9178,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -4602,7 +9202,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const adminLogin = async (email: string, password: string, rememberMe: boolean) => {
+
+
+
+
 
 
 
@@ -4610,7 +9218,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const defaultAdmins: Record<string, { role: string; name: string; pass: string }> = {
+
+
+
+
 
 
 
@@ -4618,7 +9234,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         "content@storyvault.com": { role: "Content Manager", name: "Clara Page", pass: "Content123!" },
+
+
+
+
 
 
 
@@ -4626,11 +9250,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         "orders@storyvault.com": { role: "Order Manager", name: "David Parcel", pass: "Orders123!" },
 
 
 
+
+
+
+
         "analytics@storyvault.com": { role: "Analytics Viewer", name: "Elena Chart", pass: "Analytics123!" }
+
+
+
+
 
 
 
@@ -4642,7 +9278,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
       if (defaultAdmins[email] && defaultAdmins[email].pass === password) {
+
+
+
+
 
 
 
@@ -4650,7 +9298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           uid: "local-mock-admin-uid",
+
+
+
+
 
 
 
@@ -4658,7 +9314,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           email: email,
+
+
+
+
 
 
 
@@ -4666,7 +9330,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           createdAt: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -4674,7 +9346,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         };
+
+
+
+
 
 
 
@@ -4682,7 +9362,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         if (rememberMe) {
+
+
+
+
 
 
 
@@ -4690,7 +9378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         } else {
+
+
+
+
 
 
 
@@ -4698,7 +9394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         }
+
+
+
+
 
 
 
@@ -4706,7 +9410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           title: "CMS Authorized (Offline)",
+
+
+
+
 
 
 
@@ -4714,7 +9426,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         });
+
+
+
+
 
 
 
@@ -4722,7 +9442,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       } else {
+
+
+
+
 
 
 
@@ -4730,7 +9458,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
 
 
 
@@ -4742,7 +9478,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
     try {
+
+
+
+
 
 
 
@@ -4750,7 +9498,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       try {
+
+
+
+
 
 
 
@@ -4758,7 +9514,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       } catch (signInErr: any) {
+
+
+
+
 
 
 
@@ -4766,7 +9530,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           "superadmin@storyvault.com": { role: "Super Admin", name: "Victoria Rex", pass: "SuperAdmin123!" },
+
+
+
+
 
 
 
@@ -4774,7 +9546,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           "inventory@storyvault.com": { role: "Inventory Manager", name: "Marcus Stock", pass: "Inventory123!" },
+
+
+
+
 
 
 
@@ -4782,11 +9562,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           "analytics@storyvault.com": { role: "Analytics Viewer", name: "Elena Chart", pass: "Analytics123!" }
 
 
 
+
+
+
+
         };
+
+
+
+
+
+
+
+
 
 
 
@@ -4798,7 +9594,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+
+
+
 
 
 
@@ -4806,7 +9610,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           
+
+
+
+
 
 
 
@@ -4814,7 +9626,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             uid: user.uid,
+
+
+
+
 
 
 
@@ -4822,7 +9642,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             email: email,
+
+
+
+
 
 
 
@@ -4830,7 +9658,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
             createdAt: new Date().toISOString(),
+
+
+
+
 
 
 
@@ -4838,7 +9674,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           });
+
+
+
+
 
 
 
@@ -4846,7 +9690,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
           throw signInErr;
+
+
+
+
 
 
 
@@ -4854,7 +9706,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
+
+
+
+
+
+
+
+
 
 
 
@@ -4866,7 +9730,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       const adminRef = doc(db, "admins", user.uid);
+
+
+
+
 
 
 
@@ -4874,7 +9746,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4882,7 +9762,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         await signOut(auth);
+
+
+
+
 
 
 
@@ -4890,11 +9778,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       }
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4902,7 +9802,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       await updateDoc(adminRef, { lastLogin: new Date().toISOString() });
+
+
+
+
 
 
 
@@ -4910,7 +9818,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4918,7 +9834,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4926,7 +9850,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         localStorage.setItem("storyvault_admin", JSON.stringify(adminData));
+
+
+
+
 
 
 
@@ -4934,7 +9866,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         sessionStorage.setItem("storyvault_admin", JSON.stringify(adminData));
+
+
+
+
 
 
 
@@ -4942,7 +9882,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       
+
+
+
+
 
 
 
@@ -4950,7 +9898,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         title: "CMS Authorized",
+
+
+
+
 
 
 
@@ -4958,7 +9914,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -4966,7 +9930,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     } catch (err: any) {
+
+
+
+
 
 
 
@@ -4974,11 +9946,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
 
 
 
+
+
+
+
   };
+
+
+
+
+
+
+
+
 
 
 
@@ -4990,7 +9978,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   const adminLogout = async () => {
+
+
+
+
 
 
 
@@ -4998,7 +9994,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setCurrentAdmin(null);
+
+
+
+
 
 
 
@@ -5006,7 +10010,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       sessionStorage.removeItem("storyvault_admin");
+
+
+
+
 
 
 
@@ -5014,7 +10026,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         title: "CMS Session Closed",
+
+
+
+
 
 
 
@@ -5022,7 +10042,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       });
+
+
+
+
 
 
 
@@ -5030,7 +10058,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
+
+
+
+
 
 
 
@@ -5042,7 +10082,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       setCurrentAdmin(null);
+
+
+
+
 
 
 
@@ -5050,7 +10098,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       sessionStorage.removeItem("storyvault_admin");
+
+
+
+
 
 
 
@@ -5058,7 +10114,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       addToast({
+
+
+
+
 
 
 
@@ -5066,7 +10130,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
         message: "Administrator session terminated."
+
+
+
+
 
 
 
@@ -5074,7 +10146,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     } catch (err) {
+
+
+
+
 
 
 
@@ -5082,7 +10162,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     }
+
+
+
+
 
 
 
@@ -5094,7 +10182,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   const contextValue = useMemo(() => ({
+
+
+
+
 
 
 
@@ -5102,7 +10202,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     cart,
+
+
+
+
 
 
 
@@ -5110,7 +10218,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     purchasedBooks,
+
+
+
+
 
 
 
@@ -5118,7 +10234,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     shippingDetails,
+
+
+
+
 
 
 
@@ -5126,7 +10250,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     currentUserProfile,
+
+
+
+
 
 
 
@@ -5134,7 +10266,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     isAuthLoading,
+
+
+
+
 
 
 
@@ -5142,7 +10282,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     receipts,
+
+
+
+
 
 
 
@@ -5150,7 +10298,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     removeToast,
+
+
+
+
 
 
 
@@ -5158,7 +10314,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     removeFromCart,
+
+
+
+
 
 
 
@@ -5166,7 +10330,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     toggleWishlist,
+
+
+
+
 
 
 
@@ -5174,7 +10346,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     applyCoupon,
+
+
+
+
 
 
 
@@ -5182,7 +10362,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     saveShipping,
+
+
+
+
 
 
 
@@ -5190,7 +10378,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     downloadBook,
+
+
+
+
 
 
 
@@ -5198,7 +10394,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     fetchUserLibrary,
+
+
+
+
 
 
 
@@ -5206,7 +10410,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     isFirebaseConfigValid,
+
+
+
+
 
 
 
@@ -5214,7 +10426,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     customerSignup,
+
+
+
+
 
 
 
@@ -5222,7 +10442,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     customerLogout,
+
+
+
+
 
 
 
@@ -5230,11 +10458,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     adminLogout,
 
 
 
+
+
+
+
     loginWithGoogle
+
+
+
+
 
 
 
@@ -5242,7 +10482,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     books,
+
+
+
+
 
 
 
@@ -5250,7 +10498,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     wishlist,
+
+
+
+
 
 
 
@@ -5258,7 +10514,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     activeCoupon,
+
+
+
+
 
 
 
@@ -5266,7 +10530,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     currentUser,
+
+
+
+
 
 
 
@@ -5274,7 +10546,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     currentAdmin,
+
+
+
+
 
 
 
@@ -5282,7 +10562,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     toasts,
+
+
+
+
 
 
 
@@ -5290,7 +10578,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     isFirebaseConfigValid,
+
+
+
+
 
 
 
@@ -5298,7 +10594,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     customerSignup,
+
+
+
+
 
 
 
@@ -5306,7 +10610,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     customerLogout,
+
+
+
+
 
 
 
@@ -5314,11 +10626,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
     adminLogout,
 
 
 
+
+
+
+
     loginWithGoogle
+
+
+
+
 
 
 
@@ -5330,7 +10654,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
+
+
+
+
   return (
+
+
+
+
 
 
 
@@ -5338,7 +10674,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
       {children}
+
+
+
+
 
 
 
@@ -5346,11 +10690,27 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
 
 
+
+
+
+
   );
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -5362,7 +10722,15 @@ export function useBookstore() {
 
 
 
+
+
+
+
   const context = useContext(BookstoreContext);
+
+
+
+
 
 
 
@@ -5370,7 +10738,15 @@ export function useBookstore() {
 
 
 
+
+
+
+
     throw new Error("useBookstore must be used within a BookstoreProvider");
+
+
+
+
 
 
 
@@ -5378,11 +10754,23 @@ export function useBookstore() {
 
 
 
+
+
+
+
   return context;
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
