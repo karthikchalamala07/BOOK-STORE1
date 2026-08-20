@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import { X, Printer, Download, BookOpen, ShieldCheck, Clock, MapPin, Truck } from "lucide-react";
@@ -35,6 +36,7 @@ interface ReceiptViewProps {
 }
 
 export default function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
+  const navigate = useNavigate();
   const printableRef = useRef<HTMLDivElement>(null);
 
   // Dynamic QR Verification URL Resolution
@@ -44,7 +46,7 @@ export default function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
   const baseUrl = isLocal 
     ? window.location.origin 
     : (import.meta.env.VITE_APP_URL || window.location.origin);
-  const secureUrl = `${baseUrl}/receipt/${qrIdentifier}`;
+  const secureUrl = `${baseUrl}/verify/${qrIdentifier}`;
 
   const handlePrint = () => {
     window.print();
@@ -255,7 +257,7 @@ export default function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
                         });
                         setTimeout(() => {
                           onClose();
-                          window.location.href = "/digital-vault";
+                          navigate("/digital-vault");
                         }, 1500);
                       }}
                       className="py-2 px-3 bg-gold hover:bg-gold-hover text-background font-mono text-[9px] uppercase font-bold tracking-wider rounded transition-colors text-center cursor-pointer font-sans"

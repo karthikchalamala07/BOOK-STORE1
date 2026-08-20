@@ -89,8 +89,7 @@ export default function AuthorGallery({ onBookSelect, localBooks }: AuthorGaller
                 )}
 
                 {/* Author Portrait Image */}
-                <img 
-                  loading="lazy" 
+                <img loading="lazy" decoding="async" 
                   src={author.portrait} 
                   alt={author.name}
                   onLoad={() => handleImageLoad(author.id)}

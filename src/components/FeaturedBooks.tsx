@@ -36,7 +36,7 @@ export default function FeaturedBooks({ books, onBookSelect, onReadPreview }: Fe
 
   // 8. Log the fetched array during development to verify four books are returned
   useEffect(() => {
-    console.log("Featured books returned from Content Repository:", featuredBooks);
+    
   }, [featuredBooks]);
 
   // 4. If Firestore returns no data, display a proper empty state instead of silently failing

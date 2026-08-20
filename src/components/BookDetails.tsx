@@ -4,7 +4,7 @@ import { X, Star, ShoppingBag, Heart, BookOpen, Truck, ShieldCheck, RefreshCw } 
 import { Book } from "../types";
 import { useBookstore } from "../context/useBookstore";
 import { getBookPricing } from "../services/booksDb";
-import { collection, onSnapshot, addDoc, query, where } from "firebase/firestore";
+import { collection, onSnapshot, addDoc, query, where } from "../services/firebase";
 import { db } from "../services/firebase";
 
 interface BookDetailsProps {
@@ -56,7 +56,7 @@ export default function BookDetails({
       where("status", "==", "Approved")
     );
 
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(q, (snap: any) => {
       const fetched: Review[] = [];
       snap.forEach(docSnap => {
         fetched.push({ id: docSnap.id, ...docSnap.data() } as Review);
@@ -64,7 +64,7 @@ export default function BookDetails({
       // Sort newest first
       fetched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReviews(fetched);
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Reviews live sync failed:", err);
     });
 
@@ -165,7 +165,7 @@ export default function BookDetails({
       setReviewName("");
       setReviewComment("");
       setReviewRating(5);
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Failed to save review in Cloud Database:", err);
       setSubmitSuccessMsg("Review submitted (offline fallback simulation).");
       setReviewName("");

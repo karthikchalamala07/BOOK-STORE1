@@ -1,3 +1,4 @@
+import CinematicIntro from "./components/CinematicIntro";
 import React, { useState, useEffect, Suspense, lazy, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
@@ -21,6 +22,7 @@ const WishlistDrawer = lazy(() => import("./components/WishlistDrawer"));
 const ReceiptView = lazy(() => import("./components/ReceiptView"));
 const ReceiptVerification = lazy(() => import("./components/ReceiptVerification"));
 const DigitalVault = lazy(() => import("./components/DigitalVault"));
+const DigitalReaderRouteWrapper = lazy(() => import("./components/DigitalReaderRouteWrapper"));
 const PurchasedReader = lazy(() => import("./components/PurchasedReader"));
 const BookDetails = lazy(() => import("./components/BookDetails"));
 const SearchPanel = lazy(() => import("./components/SearchPanel"));
@@ -50,6 +52,7 @@ function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [showIntro, setShowIntro] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeBook, setActiveBook] = useState<Book | null>(null);
 
@@ -61,13 +64,13 @@ function AppContent() {
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Local storage hooks (now synced to Firestore)
+  // Local storage hooks (now synced to PostgreSQL)
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addBookmark, removeBookmark, getBookmark } = useBookmarks();
   const { history, updateReadingProgress, clearHistory } = useReadingHistory();
 
   // Load live books, cart, and wishlist from BookstoreProvider
-  const { books, cart, wishlist, toasts, removeToast, fetchUserLibrary, currentUser, currentAdmin, currentUserProfile, isAuthLoading, isFirebaseConfigValid, firebaseInitializationError } = useBookstore();
+  const { books, cart, wishlist, toasts, removeToast, fetchUserLibrary, currentUser, currentAdmin, currentUserProfile, isAuthLoading, isSupabaseConfigValid, supabaseInitializationError } = useBookstore();
 
   const [unlockedBookIds, setUnlockedBookIds] = useState<string[]>([]);
   
@@ -158,26 +161,9 @@ function AppContent() {
 
   const cartItemsCount = cart.reduce((acc, curr) => acc + curr.quantity, 0);
 
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-[#0C0C0C] flex flex-col items-center justify-center space-y-6">
-        <div className="relative w-16 h-16 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-gold/20 border-t-gold animate-spin" />
-        </div>
-        <div className="text-center">
-          <span className="font-mono text-[9px] text-gold uppercase tracking-[0.25em] block">
-            STORYVAULT ARCHIVE
-          </span>
-          <p className="font-serif text-xs italic text-secondaryText mt-2 animate-pulse">
-            Authenticating Preservation Node...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative bg-background text-primaryText min-h-screen selection:bg-gold selection:text-background overflow-hidden">
+      {showIntro && <CinematicIntro onComplete={() => setShowIntro(false)} />}
       <ScrollToTop />
 
       {/* Premium Toast Notifications Overlay */}
@@ -553,7 +539,22 @@ function AppContent() {
 
           {/* DIGITAL VAULT ROUTE */}
           <Route 
-            path="/digital-vault" 
+            path="/digital-vault/:bookId" 
+            element={
+              <motion.div
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                <Suspense fallback={<div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center text-xs font-mono text-[#C9A227]">Opening Codex Reader...</div>}>
+                  <DigitalReaderRouteWrapper />
+                </Suspense>
+              </motion.div>
+            }
+          />
+          <Route 
+            path="/digital-vault"  
             element={
               <motion.div
                 variants={pageTransitionVariants}

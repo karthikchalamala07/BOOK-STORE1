@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, Bookmark, BookmarkCheck, Type, Sp
 import { Book, Chapter } from "../types";
 import { fetchGutenbergBook, parseGutenbergText } from "../services/api";
 import { useBookstore } from "../context/useBookstore";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "../services/firebase";
 import { db, auth } from "../services/firebase";
 
 interface PurchasedReaderProps {
@@ -123,7 +123,7 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
             return;
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.warn("Storage text fetch failed, trying Gutenberg proxy:", err);
       }
       

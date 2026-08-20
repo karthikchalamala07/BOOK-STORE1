@@ -13,15 +13,25 @@ export interface Book {
   coverUrl: string;
   description: string;
   quote: string;
-  chapters: Chapter[];
+  chapters?: Chapter[];
   openLibraryKey?: string;
   gutenbergId?: string;
   previewContent?: Chapter[];
   fullBookPath?: string;
   totalPages?: number;
+  price?: number;
+  stock?: number;
+  rating?: number;
+  featured?: boolean;
+  isFeatured?: boolean;
+  coverImage?: string;
+  discount?: number;
+  isAvailable?: boolean;
 }
 
 export interface ReadingState {
+  chapterIndex?: number;
+  pageIndex?: number;
   bookId: string;
   currentChapterIndex: number;
   currentPageIndex: number;

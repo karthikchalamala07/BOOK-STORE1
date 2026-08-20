@@ -73,7 +73,7 @@ export default function DigitalVault({ onReadPreview }: DigitalVaultProps) {
       } else {
         setErrorMsg(res.message || "Invalid Activation Code.");
       }
-    } catch (err) {
+    } catch (err: any) {
       setLoading(false);
       setErrorMsg("System error. Verification failed.");
     }
@@ -294,8 +294,8 @@ export default function DigitalVault({ onReadPreview }: DigitalVaultProps) {
                   if (!book) return null;
 
                   // Progress computations
-                  const progressPercent = item.pageIndex && book.chapters.length > 0
-                    ? Math.min(100, Math.floor((item.chapterIndex / book.chapters.length) * 100))
+                  const progressPercent = item.pageIndex && book.chapters?.length || 0 > 0
+                    ? Math.min(100, Math.floor((item.chapterIndex / book.chapters?.length || 0) * 100))
                     : 0;
 
                   return (

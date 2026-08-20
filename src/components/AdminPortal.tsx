@@ -15,7 +15,7 @@ import {
 import { Book, Author } from "../types";
 
 // Firebase Imports
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "../services/firebase";
 import { db } from "../services/firebase";
 import { FEATURED_AUTHORS } from "../services/booksDb";
 
@@ -417,9 +417,9 @@ export default function AdminPortal() {
 
     // Initial local storage fallbacks load
     // Authors listener & seed
-    const unsubAuthors = onSnapshot(collection(db, "authors"), (snap) => {
+    const unsubAuthors = onSnapshot(collection(db, "authors"), (snap: any) => {
       const list: Author[] = [];
-      snap.forEach((docSnap) => {
+      snap.forEach((docSnap: any) => {
         list.push({ id: docSnap.id, ...docSnap.data() } as Author);
       });
       if (list.length === 0) {
@@ -429,14 +429,14 @@ export default function AdminPortal() {
       } else {
         setAuthorsList(list);
       }
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Authors sync offline");
     });
 
     // Categories listener & seed
-    const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
+    const unsubCategories = onSnapshot(collection(db, "categories"), (snap: any) => {
       const list: CMSCategory[] = [];
-      snap.forEach((docSnap) => {
+      snap.forEach((docSnap: any) => {
         list.push({ id: docSnap.id, ...docSnap.data() } as CMSCategory);
       });
       if (list.length === 0) {
@@ -453,14 +453,14 @@ export default function AdminPortal() {
       } else {
         setCategoriesList(list);
       }
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Categories sync offline");
     });
 
     // Collections listener & seed
-    const unsubCollections = onSnapshot(collection(db, "collections"), (snap) => {
+    const unsubCollections = onSnapshot(collection(db, "collections"), (snap: any) => {
       const list: CMSCollection[] = [];
-      snap.forEach((docSnap) => {
+      snap.forEach((docSnap: any) => {
         list.push({ id: docSnap.id, ...docSnap.data() } as CMSCollection);
       });
       if (list.length === 0) {
@@ -474,7 +474,7 @@ export default function AdminPortal() {
       } else {
         setCollectionsList(list);
       }
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Collections sync offline");
     });
 
@@ -579,37 +579,37 @@ export default function AdminPortal() {
     };
 
     // Subscriptions
-    const unsubBooks = onSnapshot(collection(db, "books"), (snap) => {
+    const unsubBooks = onSnapshot(collection(db, "books"), (snap: any) => {
       const list: CMSBook[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as CMSBook);
       });
       mergeBooks(list);
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Firestore books sync offline, using local fallback");
     });
 
-    const unsubOrders = onSnapshot(collection(db, "orders"), (snap) => {
+    const unsubOrders = onSnapshot(collection(db, "orders"), (snap: any) => {
       const list: Order[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as Order);
       });
       mergeOrders(list);
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Firestore orders sync offline, using local fallback");
     });
 
-    const unsubCustomers = onSnapshot(collection(db, "users"), (snap) => {
+    const unsubCustomers = onSnapshot(collection(db, "users"), (snap: any) => {
       const list: Customer[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as Customer);
       });
       setCustomers(list);
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Firestore users sync offline");
     });
 
-    const unsubCoupons = onSnapshot(collection(db, "coupons"), (snap) => {
+    const unsubCoupons = onSnapshot(collection(db, "coupons"), (snap: any) => {
       const list: Coupon[] = [];
       snap.forEach(dSnap => {
         list.push({ ...dSnap.data() } as Coupon);
@@ -617,7 +617,7 @@ export default function AdminPortal() {
       setCoupons(list);
     });
 
-    const unsubAutomations = onSnapshot(collection(db, "automations"), (snap) => {
+    const unsubAutomations = onSnapshot(collection(db, "automations"), (snap: any) => {
       const list: AutomationRule[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as AutomationRule);
@@ -625,7 +625,7 @@ export default function AdminPortal() {
       setAutomations(list);
     });
 
-    const unsubMedia = onSnapshot(collection(db, "media"), (snap) => {
+    const unsubMedia = onSnapshot(collection(db, "media"), (snap: any) => {
       const list: MediaFile[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as MediaFile);
@@ -637,7 +637,7 @@ export default function AdminPortal() {
       console.warn("Media subscription offline");
     };
 
-    const unsubAudits = onSnapshot(collection(db, "audits"), (snap) => {
+    const unsubAudits = onSnapshot(collection(db, "audits"), (snap: any) => {
       const list: AuditLog[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as AuditLog);
@@ -645,7 +645,7 @@ export default function AdminPortal() {
       setAuditLogs(list);
     });
 
-    const unsubReviews = onSnapshot(collection(db, "reviews"), (snap) => {
+    const unsubReviews = onSnapshot(collection(db, "reviews"), (snap: any) => {
       const list: Review[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as Review);
@@ -653,26 +653,26 @@ export default function AdminPortal() {
       setReviews(list);
     });
 
-    const unsubNotifications = onSnapshot(collection(db, "notifications"), (snap) => {
+    const unsubNotifications = onSnapshot(collection(db, "notifications"), (snap: any) => {
       const list: NotificationMsg[] = [];
       snap.forEach(dSnap => {
         list.push({ id: dSnap.id, ...dSnap.data() } as NotificationMsg);
       });
       mergeNotifications(list);
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Firestore notifications sync offline, using local fallback");
     });
 
-    const unsubAnalytics = onSnapshot(doc(db, "analytics", "summary"), (docSnap) => {
+    const unsubAnalytics = onSnapshot(doc(db, "analytics", "summary"), (docSnap: any) => {
       if (docSnap.exists()) {
         mergeAnalytics(docSnap.data());
       }
-    }, (err) => {
+    }, (err: any) => {
       console.warn("Firestore analytics sync offline, using local fallback");
     });
 
     // Homepage layout settings listener & seed
-    const unsubLayout = onSnapshot(doc(db, "layout", "homepage"), (docSnap) => {
+    const unsubLayout = onSnapshot(doc(db, "layout", "homepage"), (docSnap: any) => {
       if (docSnap.exists()) {
         setHomepageLayout(docSnap.data().sections || []);
       } else {
@@ -883,7 +883,7 @@ export default function AdminPortal() {
         version: 1
       });
       triggerToast(`Book "${book.title}" duplicated successfully.`);
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Failed to duplicate book:", err);
     }
   };
@@ -895,7 +895,7 @@ export default function AdminPortal() {
       const nextFeatured = !book.isFeatured;
       await updateDoc(bookRef, { isFeatured: nextFeatured });
       triggerToast(`Book "${book.title}" featured status updated.`);
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Failed to update featured status:", err);
     }
   };
@@ -985,7 +985,7 @@ export default function AdminPortal() {
       });
       triggerToast(`Successfully imported "${item.title}"!`, "success");
       setIsImportModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to import book.", "error");
     }
   };
@@ -1078,7 +1078,7 @@ export default function AdminPortal() {
       await setDoc(doc(db, "authors", selectedAuthor.id), selectedAuthor);
       triggerToast(`Author "${selectedAuthor.name}" saved successfully.`);
       setIsAuthorModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to save author.", "error");
     }
   };
@@ -1088,7 +1088,7 @@ export default function AdminPortal() {
       try {
         await deleteDoc(doc(db, "authors", id));
         triggerToast("Author profile deleted.");
-      } catch (err) {
+      } catch (err: any) {
         triggerToast("Failed to delete author.", "error");
       }
     }
@@ -1121,7 +1121,7 @@ export default function AdminPortal() {
       await setDoc(doc(db, "categories", selectedCategory.id), selectedCategory);
       triggerToast(`Category "${selectedCategory.name}" saved successfully.`);
       setIsCategoryModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to save category.", "error");
     }
   };
@@ -1131,7 +1131,7 @@ export default function AdminPortal() {
       try {
         await deleteDoc(doc(db, "categories", id));
         triggerToast("Category deleted.");
-      } catch (err) {
+      } catch (err: any) {
         triggerToast("Failed to delete category.", "error");
       }
     }
@@ -1158,7 +1158,7 @@ export default function AdminPortal() {
       await setDoc(doc(db, "collections", selectedCollection.id), selectedCollection);
       triggerToast(`Collection "${selectedCollection.name}" saved successfully.`);
       setIsCollectionModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to save collection.", "error");
     }
   };
@@ -1168,7 +1168,7 @@ export default function AdminPortal() {
       try {
         await deleteDoc(doc(db, "collections", id));
         triggerToast("Collection deleted.");
-      } catch (err) {
+      } catch (err: any) {
         triggerToast("Failed to delete collection.", "error");
       }
     }
@@ -1249,7 +1249,7 @@ export default function AdminPortal() {
         device: "Chrome / Windows 11",
         timestamp: new Date().toISOString()
       });
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to save coupon.", "error");
     }
   };
@@ -1263,7 +1263,7 @@ export default function AdminPortal() {
       try {
         await deleteDoc(doc(db, "coupons", id));
         triggerToast("Coupon deleted.");
-      } catch (err) {
+      } catch (err: any) {
         triggerToast("Failed to delete coupon.", "error");
       }
     }
@@ -1289,7 +1289,7 @@ export default function AdminPortal() {
       await setDoc(doc(db, "automations", selectedAutomation.id!), selectedAutomation);
       triggerToast(`Rule trigger saved successfully.`);
       setIsAutomationModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to save rule.", "error");
     }
   };
@@ -1299,7 +1299,7 @@ export default function AdminPortal() {
       try {
         await deleteDoc(doc(db, "automations", id));
         triggerToast("Rule deleted.");
-      } catch (err) {
+      } catch (err: any) {
         triggerToast("Failed to delete rule.", "error");
       }
     }
@@ -1323,7 +1323,7 @@ export default function AdminPortal() {
       setIsMediaModalOpen(false);
       setNewMediaName("");
       setNewMediaUrl("");
-    } catch (err) {
+    } catch (err: any) {
       triggerToast("Failed to upload media.", "error");
     }
   };
@@ -1333,7 +1333,7 @@ export default function AdminPortal() {
       try {
         await deleteDoc(doc(db, "mediaFiles", id));
         triggerToast("Media file deleted.");
-      } catch (err) {
+      } catch (err: any) {
         triggerToast("Failed to delete file.", "error");
       }
     }
@@ -1474,7 +1474,7 @@ export default function AdminPortal() {
         });
         triggerToast(`Book "${selectedBook.title}" updated successfully.`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Firestore save failed, fallback locally:", err);
     }
     
@@ -1485,7 +1485,7 @@ export default function AdminPortal() {
     try {
       await deleteDoc(doc(db, "books", id));
       triggerToast("Book deleted.");
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Delete failed:", err);
     }
   };
@@ -1497,7 +1497,7 @@ export default function AdminPortal() {
         updatedAt: new Date().toISOString()
       });
       triggerToast(`Order status updated to ${nextStatus}`, "success");
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Order update failed:", err);
     }
   };
@@ -1508,7 +1508,7 @@ export default function AdminPortal() {
       await updateDoc(doc(db, "reviews", reviewId), { status: "Approved" });
       triggerToast("Review published to website!", "success");
       runConfetti();
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Review approval failed:", err);
     }
   };
@@ -1517,7 +1517,7 @@ export default function AdminPortal() {
     try {
       await deleteDoc(doc(db, "reviews", reviewId));
       triggerToast("Review rejected and deleted.", "error");
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Review rejection failed:", err);
     }
   };
@@ -1526,7 +1526,7 @@ export default function AdminPortal() {
   const handleClearNotification = async (id: string) => {
     try {
       await deleteDoc(doc(db, "notifications", id));
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Clear notification failed:", err);
     }
   };

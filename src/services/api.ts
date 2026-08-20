@@ -88,7 +88,7 @@ export async function fetchGutenbergBook(gutenbergId: string, title: string, aut
   
   // Cache Hit
   if (gutenbergCache[cacheKey]) {
-    console.log(`[StoryVault Cache] Cache hit for Gutenberg book: ${title} (${gutenbergId})`);
+
     return gutenbergCache[cacheKey];
   }
 
@@ -105,7 +105,7 @@ export async function fetchGutenbergBook(gutenbergId: string, title: string, aut
   } catch (error) {
     console.warn("CORS/Fetch error on Gutenberg. Using high-fidelity custom fallback layout.", error);
     const local = CLASSICS_DATABASE.find(b => b.gutenbergId === gutenbergId || b.id === gutenbergId);
-    if (local) return local.chapters;
+    if (local) return local.chapters || [];
     
     return [
       {
@@ -127,7 +127,7 @@ export async function searchOpenLibrary(query: string): Promise<Book[]> {
 
   // Cache Hit
   if (openLibraryCache[cacheKey]) {
-    console.log(`[StoryVault Cache] Cache hit for search query: "${query}"`);
+    
     return openLibraryCache[cacheKey];
   }
 

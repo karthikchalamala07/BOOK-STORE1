@@ -5,7 +5,7 @@ import { Book, Chapter } from "../types";
 import { fetchGutenbergBook } from "../services/api";
 import { useBookstore } from "../context/useBookstore";
 import { getBookPricing } from "../services/booksDb";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "../services/firebase";
 import { db, auth } from "../services/firebase";
 
 interface Book3DViewerProps {

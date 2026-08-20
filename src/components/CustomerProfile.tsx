@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBookstore } from "../context/useBookstore";
 import { User, MapPin, Download, Receipt, BookOpen, Heart, LogOut, Lock, Edit3, Save, Compass } from "lucide-react";
-import { updatePassword, updateProfile } from "firebase/auth";
+import { updatePassword, updateProfile } from "../services/firebase";
 import { auth, db } from "../services/firebase";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "../services/firebase";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
@@ -63,7 +63,7 @@ export default function CustomerProfile() {
           }
         }
         setLibraryItems(userLib);
-      } catch (err) {
+      } catch (err: any) {
         console.warn("Failed to load user digital library:", err);
       } finally {
         setLoadingLib(false);
