@@ -10,7 +10,7 @@ interface DigitalVaultProps {
 }
 
 export default function DigitalVault({ onReadPreview }: DigitalVaultProps) {
-  const { books, verifyAndActivateCode, fetchUserLibrary, addToast } = useBookstore();
+  const { books, verifyAndActivateCode, fetchUserLibrary, addToast, currentUser } = useBookstore();
   
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,10 +81,9 @@ export default function DigitalVault({ onReadPreview }: DigitalVaultProps) {
 
   const handleRemove = async (bookId: string) => {
     try {
-      const { deleteDoc, doc } = await import("firebase/firestore");
-      const { db, auth } = await import("../services/firebase");
-      const userId = auth.currentUser?.uid || "guest";
-      await deleteDoc(doc(db, "users", userId, "digitalLibrary", bookId));
+      const { supabase } = await import("../lib/supabase");
+      const userId = currentUser?.id || currentUser?.uid || "guest";
+      await supabase.from("digital_library").delete().eq("user_id", userId).eq("book_id", bookId);
     } catch (e) {
       console.warn("Cloud deletion failed, using local backup only:", e);
     }
@@ -294,8 +293,9 @@ export default function DigitalVault({ onReadPreview }: DigitalVaultProps) {
                   if (!book) return null;
 
                   // Progress computations
-                  const progressPercent = item.pageIndex && book.chapters?.length || 0 > 0
-                    ? Math.min(100, Math.floor((item.chapterIndex / book.chapters?.length || 0) * 100))
+                  const chaptersCount = book.chapters?.length || 0;
+                  const progressPercent = item.pageIndex && chaptersCount > 0
+                    ? Math.min(100, Math.floor((item.chapterIndex / (chaptersCount || 1)) * 100))
                     : 0;
 
                   return (

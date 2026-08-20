@@ -4,7 +4,7 @@ import {
   addDoc, runTransaction, getDocs, writeBatch, query, where,
   auth, db 
 } from "../services/firebase";
-import { redeemAccessCodeService } from "../services/entitlementService";
+import { redeemAccessCodeService, DigitalEntitlement } from "../services/entitlementService";
 
 const formatSupabaseError = (err: any): string => {
   if (!err) return "An unexpected error occurred.";
@@ -73,7 +73,7 @@ interface BookstoreContextType {
   saveShipping: (details: ShippingDetails) => void;
   checkout: () => Promise<{ success: boolean; orderId: string; receipt?: any }>;
   downloadBook: (receiptId: string, bookId: string) => Promise<void>;
-  verifyAndActivateCode: (code: string) => Promise<{ success: boolean; book?: Book; message: string; codeDetails?: any }>;
+  verifyAndActivateCode: (code: string) => Promise<{ success: boolean; bookId?: string; message: string; book?: Book; codeDetails?: any }>;
   fetchUserLibrary: () => Promise<any[]>;
   saveReadingProgress: (bookId: string, chapterIndex: number, pageIndex: number) => Promise<void>;
   customerSignup: (fullName: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -96,6 +96,8 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [receipts, setReceipts] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [userEntitlements, setUserEntitlements] = useState<any[]>([]);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   // Auto-login stored admin session upon mounting
   useEffect(() => {
@@ -124,7 +126,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       setIsAuthLoading(false);
       return;
     }
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubAuth = onAuthStateChanged(auth, async (user: any) => {
       if (user) {
         setCurrentUser(user);
         // Sync user document
@@ -145,7 +147,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
           });
         }
         // Setup real-time listener for user profile sync
-        const unsubUserDoc = onSnapshot(userRef, (docSnap) => {
+        const unsubUserDoc = onSnapshot(userRef, (docSnap: any) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
             setCurrentUserProfile(data);
@@ -156,15 +158,15 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
             setCurrentUserProfile(null);
           }
           setIsAuthLoading(false);
-        }, (err) => {
+        }, (err: any) => {
           console.warn("Failed to listen user doc:", err);
           setIsAuthLoading(false);
         });
         // Setup real-time listener for customer invoices
         const receiptsQuery = query(collection(db, "receipts"), where("customerId", "==", user.uid));
-        const unsubReceipts = onSnapshot(receiptsQuery, (snap) => {
+        const unsubReceipts = onSnapshot(receiptsQuery, (snap: any) => {
           const fetched: any[] = [];
-          snap.forEach(docSnap => {
+          snap.forEach((docSnap: any) => {
             fetched.push({ id: docSnap.id, ...docSnap.data() });
           });
           setReceipts(fetched);
@@ -246,10 +248,10 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       });
       return;
     }
-    const unsubBooks = onSnapshot(collection(db, "books"), async (snap) => {
+    const unsubBooks = onSnapshot(collection(db, "books"), async (snap: any) => {
       const featuredTargetIds = ["dracula", "pride-and-prejudice", "sherlock-holmes", "the-count-of-monte-cristo"];
       const existingIds: string[] = [];
-      snap.forEach(dSnap => {
+      snap.forEach((dSnap: any) => {
         existingIds.push(dSnap.id);
       });
       const missingFeatured = featuredTargetIds.some(id => !existingIds.includes(id));
@@ -304,7 +306,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         const fetched: Book[] = [];
-        snap.forEach(docSnap => {
+        snap.forEach((docSnap: any) => {
           fetched.push({ id: docSnap.id, ...docSnap.data() } as Book);
         });
         setBooks(fetched);
@@ -312,6 +314,19 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     });
     return () => unsubBooks();
   }, []);
+  const updateFirestoreUser = async (newCart?: CartItem[], newWishlist?: string[]) => {
+    if (!currentUser || !auth) return;
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        cart: newCart !== undefined ? newCart : cart,
+        wishlist: newWishlist !== undefined ? newWishlist : wishlist,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn("Failed to update user document in Firestore:", e);
+    }
+  };
   // 3. Sync actions back to Firestore
   const addToCart = (book: Book, format: "physical" | "ebook", price: number) => {
     const newCart = [...cart];
@@ -391,20 +406,23 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
 
     const newEntitlements: DigitalEntitlement[] = [];
     cart.forEach(item => {
-      if (item.format === "ebook" || (item.format as string) === "digital" || item.format === "combo") {
+      if (item.format === "ebook" || (item.format as string) === "digital" || (item.format as string) === "combo") {
         newEntitlements.push({
           id: `ent-${Date.now()}-${item.book.id}`,
           userId: currentUser?.id || currentUser?.uid || "guest",
           bookId: item.book.id,
           orderId: orderRes.orderNumber,
-          status: "active"
+          format: item.format === "ebook" ? "digital" : (item.format as any),
+          status: "active",
+          purchasedAt: new Date().toISOString(),
+          accessCode: orderRes.digitalCode || `SV-${item.book.id.substring(0, 4).toUpperCase()}7K`
         });
         setPurchasedBooks(prev => Array.from(new Set([...prev, item.book.id])));
       }
     });
 
     if (newEntitlements.length > 0) {
-      setUserEntitlements(prev => [...prev, ...newEntitlements]);
+      setUserEntitlements((prev: any[]) => [...prev, ...newEntitlements]);
     }
 
     setCart([]);
@@ -454,18 +472,21 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name: fullName,
-        email: email,
-        role: "customer",
-        cart: [],
-        wishlist: [],
-        purchasedBooks: [],
-        createdAt: new Date().toISOString()
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name: fullName, role: "customer" } }
       });
+      if (error) throw error;
+      if (data.user) {
+        await supabase.from("users").upsert({
+          id: data.user.id,
+          name: fullName,
+          email,
+          role: "customer",
+          createdAt: new Date().toISOString()
+        });
+      }
       addToast({
         title: "Account Created",
         message: `Welcome to StoryVault, ${fullName}!`
@@ -502,7 +523,8 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       addToast({
         title: "Login Successful",
         message: "Welcome back to StoryVault!"
@@ -524,8 +546,9 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       setCurrentUserProfile(null);
+      setCurrentUser(null);
       addToast({
         title: "Logged Out",
         message: "Preservation profile disconnected successfully."
@@ -561,26 +584,11 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     }
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          uid: user.uid,
-          name: user.displayName || "StoryVault Reader",
-          email: user.email || "",
-          role: "customer",
-          cart: [],
-          wishlist: [],
-          purchasedBooks: [],
-          createdAt: new Date().toISOString()
-        });
-      }
+      const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+      if (error) throw error;
       addToast({
         title: "Google Sync Active",
-        message: "Signed in successfully with Google."
+        message: "Redirecting to Google authentication..."
       });
       return { success: true };
     } catch (err: any) {
@@ -657,7 +665,7 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
         await signOut(auth);
         return { success: false, error: "Access Denied: Not registered as an Administrator." };
       }
-      const adminData = adminSnap.data();
+      const adminData = (adminSnap.data() || {}) as any;
       await updateDoc(adminRef, { lastLogin: new Date().toISOString() });
       adminData.lastLogin = new Date().toISOString();
       setCurrentAdmin(adminData);
@@ -702,9 +710,9 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
   };
     const supabaseInitializationError: string | null = null;
 
-  const verifyAndActivateCode = async (code: string): Promise<{ success: boolean; bookId?: string; message?: string }> => {
+  const verifyAndActivateCode = async (code: string): Promise<{ success: boolean; bookId?: string; message: string; book?: Book; codeDetails?: any }> => {
     const res = redeemAccessCodeService(code, currentUser?.uid, receipts, books);
-    return { success: res.success, bookId: res.bookId, message: res.message };
+    return { success: res.success, bookId: res.bookId, message: res.message || "" };
   };
 
   const downloadBook = async (bookId: string) => {
@@ -716,6 +724,8 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     cart,
     wishlist,
     purchasedBooks,
+    orders,
+    userEntitlements,
     activeCoupon,
     shippingDetails,
     currentUser,
@@ -752,6 +762,8 @@ export function BookstoreProvider({ children }: { children: React.ReactNode }) {
     cart,
     wishlist,
     purchasedBooks,
+    orders,
+    userEntitlements,
     activeCoupon,
     shippingDetails,
     currentUser,

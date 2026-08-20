@@ -58,7 +58,7 @@ export default function BookDetails({
 
     const unsub = onSnapshot(q, (snap: any) => {
       const fetched: Review[] = [];
-      snap.forEach(docSnap => {
+      snap.forEach((docSnap: any) => {
         fetched.push({ id: docSnap.id, ...docSnap.data() } as Review);
       });
       // Sort newest first

@@ -14,9 +14,8 @@ import {
 } from "lucide-react";
 import { Book, Author } from "../types";
 
-// Firebase Imports
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, onSnapshot } from "../services/firebase";
-import { db } from "../services/firebase";
+import { supabase } from "../lib/supabase";
+import { collection, doc, addDoc, setDoc, updateDoc, deleteDoc, db, getDocs, onSnapshot } from "../services/firebase";
 import { FEATURED_AUTHORS } from "../services/booksDb";
 
 // Extended Book Type for CMS
@@ -578,90 +577,35 @@ export default function AdminPortal() {
       });
     };
 
-    // Subscriptions
-    const unsubBooks = onSnapshot(collection(db, "books"), (snap: any) => {
-      const list: CMSBook[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as CMSBook);
-      });
-      mergeBooks(list);
-    }, (err: any) => {
-      console.warn("Firestore books sync offline, using local fallback");
-    });
+    // Supabase Subscriptions & Synchronizations
+    const syncSupabaseCollections = async () => {
+      try {
+        const { data: bData } = await supabase.from("books").select("*");
+        if (bData && bData.length > 0) mergeBooks(bData.map((b: any) => ({ id: b.id, ...b } as CMSBook)));
+      } catch (_) {}
 
-    const unsubOrders = onSnapshot(collection(db, "orders"), (snap: any) => {
-      const list: Order[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as Order);
-      });
-      mergeOrders(list);
-    }, (err: any) => {
-      console.warn("Firestore orders sync offline, using local fallback");
-    });
+      try {
+        const { data: oData } = await supabase.from("orders").select("*");
+        if (oData && oData.length > 0) mergeOrders(oData.map((o: any) => ({ id: o.id, ...o } as Order)));
+      } catch (_) {}
 
-    const unsubCustomers = onSnapshot(collection(db, "users"), (snap: any) => {
-      const list: Customer[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as Customer);
-      });
-      setCustomers(list);
-    }, (err: any) => {
-      console.warn("Firestore users sync offline");
-    });
+      try {
+        const { data: uData } = await supabase.from("users").select("*");
+        if (uData && uData.length > 0) setCustomers(uData.map((u: any) => ({ id: u.id, ...u } as Customer)));
+      } catch (_) {}
 
-    const unsubCoupons = onSnapshot(collection(db, "coupons"), (snap: any) => {
-      const list: Coupon[] = [];
-      snap.forEach(dSnap => {
-        list.push({ ...dSnap.data() } as Coupon);
-      });
-      setCoupons(list);
-    });
+      try {
+        const { data: cData } = await supabase.from("coupons").select("*");
+        if (cData && cData.length > 0) setCoupons(cData as Coupon[]);
+      } catch (_) {}
 
-    const unsubAutomations = onSnapshot(collection(db, "automations"), (snap: any) => {
-      const list: AutomationRule[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as AutomationRule);
-      });
-      setAutomations(list);
-    });
-
-    const unsubMedia = onSnapshot(collection(db, "media"), (snap: any) => {
-      const list: MediaFile[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as MediaFile);
-      });
-      setMediaFiles(list);
-    });
-
-    const unsubMediaErrors = (err: any) => {
-      console.warn("Media subscription offline");
+      try {
+        const { data: rData } = await supabase.from("reviews").select("*");
+        if (rData && rData.length > 0) setReviews(rData as Review[]);
+      } catch (_) {}
     };
 
-    const unsubAudits = onSnapshot(collection(db, "audits"), (snap: any) => {
-      const list: AuditLog[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as AuditLog);
-      });
-      setAuditLogs(list);
-    });
-
-    const unsubReviews = onSnapshot(collection(db, "reviews"), (snap: any) => {
-      const list: Review[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as Review);
-      });
-      setReviews(list);
-    });
-
-    const unsubNotifications = onSnapshot(collection(db, "notifications"), (snap: any) => {
-      const list: NotificationMsg[] = [];
-      snap.forEach(dSnap => {
-        list.push({ id: dSnap.id, ...dSnap.data() } as NotificationMsg);
-      });
-      mergeNotifications(list);
-    }, (err: any) => {
-      console.warn("Firestore notifications sync offline, using local fallback");
-    });
+    syncSupabaseCollections();
 
     const unsubAnalytics = onSnapshot(doc(db, "analytics", "summary"), (docSnap: any) => {
       if (docSnap.exists()) {
@@ -711,21 +655,6 @@ export default function AdminPortal() {
     }, 700);
 
     return () => {
-      unsubBooks();
-      unsubAuthors();
-      unsubCategories();
-      unsubCollections();
-      unsubLayout();
-      unsubOrders();
-      unsubCustomers();
-      unsubCoupons();
-      unsubAutomations();
-      unsubMedia();
-      unsubAudits();
-      unsubReviews();
-      unsubNotifications();
-      unsubAnalytics();
-      window.removeEventListener("storage", handleStorageEvent);
       window.removeEventListener("storage", handleLocalSync);
       clearTimeout(timer);
     };

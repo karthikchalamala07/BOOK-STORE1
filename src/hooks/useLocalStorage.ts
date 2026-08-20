@@ -80,7 +80,7 @@ export function useReadingHistory() {
   };
 
   const updateReadingProgress = (bookId: string, chapterIndex: number, pageIndex: number) => {
-    updateProgress({ bookId, chapterIndex, pageIndex, updatedAt: new Date().toISOString() });
+    updateProgress({ bookId, chapterIndex, pageIndex, currentChapterIndex: chapterIndex, currentPageIndex: pageIndex, lastReadTime: Date.now(), updatedAt: new Date().toISOString() });
   };
 
   const getProgress = (bookId: string) => history.find(h => h.bookId === bookId) || null;

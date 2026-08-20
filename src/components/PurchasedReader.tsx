@@ -107,7 +107,7 @@ export default function PurchasedReader({ book, onClose }: PurchasedReaderProps)
     async function loadFullBook() {
       // Step A: Try fetching from Firebase Storage
       try {
-        const { ref, getDownloadURL } = await import("firebase/storage");
+        const { ref, getDownloadURL } = await import("../services/firebase");
         const { storage } = await import("../services/firebase");
         
         const fileRef = ref(storage, `ebooks/${book.id}.txt`);

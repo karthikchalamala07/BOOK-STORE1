@@ -36,6 +36,7 @@ export interface ReadingState {
   currentChapterIndex: number;
   currentPageIndex: number;
   lastReadTime: number;
+  updatedAt?: string;
 }
 
 export interface Author {
@@ -62,4 +63,18 @@ export interface TimelineEvent {
   author: string;
   description: string;
   bookId: string;
+}
+export type ProductFormat = "physical" | "digital" | "combo" | "ebook";
+
+export interface UserProfile {
+  id: string;
+  uid?: string;
+  email: string;
+  name: string;
+  role: 'customer' | 'admin' | 'Super Admin' | 'Content Manager' | 'Inventory Manager' | 'Order Manager' | 'Analytics Viewer';
+  cart?: any[];
+  wishlist?: string[];
+  purchasedBooks?: string[];
+  createdAt?: string;
+  lastLogin?: string | null;
 }
