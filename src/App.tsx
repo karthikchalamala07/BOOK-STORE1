@@ -1,7 +1,7 @@
 import CinematicIntro from "./components/CinematicIntro";
 import React, { useState, useEffect, Suspense, lazy, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import FeaturedBooks from "./components/FeaturedBooks";
